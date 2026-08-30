@@ -81,15 +81,12 @@ const chevronDown = (
   </svg>
 );
 const gearIcon = (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
     <path
-      d="M10.3 2.7a1.9 1.9 0 0 1 3.4 0l.18.36.4.06 3.3.48a1.9 1.9 0 0 1 1.56 1.3l.12.39.33.22 2.7 1.9a1.9 1.9 0 0 1 .7 2.53l-.19.36v.41l.19.36a1.9 1.9 0 0 1-.7 2.53l-2.7 1.9-.33.22-.12.39a1.9 1.9 0 0 1-1.56 1.3l-3.3.48-.4.06-.18.36a1.9 1.9 0 0 1-3.4 0l-.18-.36-.4-.06-3.3-.48a1.9 1.9 0 0 1-1.56-1.3l-.12-.39-.33-.22-2.7-1.9A1.9 1.9 0 0 1 1.87 9.7l.19-.36v-.41l-.19-.36A1.9 1.9 0 0 1 2.57 6.04l2.7-1.9.33-.22.12-.39A1.9 1.9 0 0 1 7.28 2.23l3.3-.48.4-.06.18-.36.14-.42Zm1.7 3.3a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      transform="translate(1.6 1.4) scale(0.82)"
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M14.2788 2.15224C13.9085 2 13.439 2 12.5 2C11.561 2 11.0915 2 10.7212 2.15224C10.2274 2.35523 9.83509 2.74458 9.63056 3.23463C9.53719 3.45834 9.50065 3.7185 9.48635 4.09799C9.46534 4.65568 9.17716 5.17189 8.69017 5.45093C8.20318 5.72996 7.60864 5.71954 7.11149 5.45876C6.77318 5.2813 6.52789 5.18262 6.28599 5.15102C5.75609 5.08178 5.22018 5.22429 4.79616 5.5472C4.47814 5.78938 4.24339 6.1929 3.7739 6.99993C3.30441 7.80697 3.06967 8.21048 3.01735 8.60491C2.94758 9.1308 3.09118 9.66266 3.41655 10.0835C3.56506 10.2756 3.77377 10.437 4.0977 10.639C4.57391 10.936 4.88032 11.4419 4.88029 12C4.88026 12.5581 4.57386 13.0639 4.0977 13.3608C3.77372 13.5629 3.56497 13.7244 3.41645 13.9165C3.09108 14.3373 2.94749 14.8691 3.01725 15.395C3.06957 15.7894 3.30432 16.193 3.7738 17C4.24329 17.807 4.47804 18.2106 4.79606 18.4527C5.22008 18.7756 5.75599 18.9181 6.28589 18.8489C6.52778 18.8173 6.77305 18.7186 7.11133 18.5412C7.60852 18.2804 8.2031 18.27 8.69012 18.549C9.17714 18.8281 9.46533 19.3443 9.48635 19.9021C9.50065 20.2815 9.53719 20.5417 9.63056 20.7654C9.83509 21.2554 10.2274 21.6448 10.7212 21.8478C11.0915 22 11.561 22 12.5 22C13.439 22 13.9085 22 14.2788 21.8478C14.7726 21.6448 15.1649 21.2554 15.3694 20.7654C15.4628 20.5417 15.4994 20.2815 15.5137 19.902C15.5347 19.3443 15.8228 18.8281 16.3098 18.549C16.7968 18.2699 17.3914 18.2804 17.8886 18.5412C18.2269 18.7186 18.4721 18.8172 18.714 18.8488C19.2439 18.9181 19.7798 18.7756 20.2038 18.4527C20.5219 18.2105 20.7566 17.807 21.2261 16.9999C21.6956 16.1929 21.9303 15.7894 21.9827 15.395C22.0524 14.8691 21.9088 14.3372 21.5835 13.9164C21.4349 13.7243 21.2262 13.5628 20.9022 13.3608C20.4261 13.0639 20.1197 12.558 20.1197 11.9999C20.1197 11.4418 20.4261 10.9361 20.9022 10.6392C21.2263 10.4371 21.435 10.2757 21.5836 10.0835C21.9089 9.66273 22.0525 9.13087 21.9828 8.60497C21.9304 8.21055 21.6957 7.80703 21.2262 7C20.7567 6.19297 20.522 5.78945 20.2039 5.54727C19.7799 5.22436 19.244 5.08185 18.7141 5.15109C18.4722 5.18269 18.2269 5.28136 17.8887 5.4588C17.3915 5.71959 16.7969 5.73002 16.3099 5.45096C15.8229 5.17191 15.5347 4.65566 15.5136 4.09794C15.4993 3.71848 15.4628 3.45833 15.3694 3.23463C15.1649 2.74458 14.7726 2.35523 14.2788 2.15224ZM12.5 15C14.1695 15 15.5228 13.6569 15.5228 12C15.5228 10.3431 14.1695 9 12.5 9C10.8305 9 9.47716 10.3431 9.47716 12C9.47716 13.6569 10.8305 15 12.5 15ZM12.5 13.2C11.8442 13.2 11.38 12.7 11.38 12C11.38 11.3 11.8442 10.8 12.5 10.8C13.1558 10.8 13.62 11.3 13.62 12C13.62 12.7 13.1558 13.2 12.5 13.2ZM12.5 13.2C11.8442 13.2 11.38 12.7 11.38 12C11.38 11.3 11.8442 10.8 12.5 10.8C13.1558 10.8 13.62 11.3 13.62 12C13.62 12.7 13.1558 13.2 12.5 13.2ZM10.8 12C10.8 11.45 11.24 11 11.9 11C12.56 11 13 11.45 13 12C13 12.55 12.56 13 11.9 13C11.24 13 10.8 12.55 10.8 12ZM14.2 12C14.2 11.45 13.76 11 13.1 11C12.44 11 12 11.45 12 12C12 12.55 12.44 13 13.1 13C13.76 13 14.2 12.55 14.2 12Z"
+      fill="currentColor"
     />
   </svg>
 );
@@ -729,6 +726,25 @@ function practiceToAccel(e: React.KeyboardEvent): string | null {
 type Tab = "general" | "steam";
 type LoginState = "idle" | "loading" | "ok" | "guard" | "empty" | "error";
 
+/** Strip the invisible tag/control characters some Steam names carry and fall back gracefully. */
+function cleanName(v: string): string {
+  const s = v
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u0020\u007f\u200b-\u200f\u2060-\u2064\ufeff\ue0000-\ue007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return s || "Steam player";
+}
+
+function Stat({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div className="rounded-lg border border-white/[0.06] bg-black/25 px-2.5 py-2 text-center">
+      <p className="text-xs font-semibold tabular-nums text-zinc-100">{value ?? "—"}</p>
+      <p className="mt-0.5 text-[9px] uppercase tracking-wider text-zinc-500">{label}</p>
+    </div>
+  );
+}
+
 function SettingsModal({
   api,
   currentHotkey,
@@ -758,6 +774,48 @@ function SettingsModal({
   const [serverPort, setServerPort] = useState(3100);
   const [onboarded, setOnboarded] = useState(false);
   const [portMsg, setPortMsg] = useState<string | null>(null);
+
+  // Signed-in profile — shown in the Steam tab INSTEAD of the QR once linked.
+  const [steamMe, setSteamMe] = useState<{
+    username: string | null;
+    avatarUrl: string | null;
+    level: number | null;
+    premierRating: number | null;
+    trust: { value: number | null; level: string | null } | null;
+    bans: { vac: number; game: number; community: boolean } | null;
+    record: { wins: number; losses: number; ties: number } | undefined;
+  } | null>(null);
+  const [steamMeLoading, setSteamMeLoading] = useState(false);
+
+  const loadTrackedMe = useCallback(async (steam64: string) => {
+    setSteamMeLoading(true);
+    try {
+      const res = await fetch(`/api/overlay/me?steam64=${encodeURIComponent(steam64)}`);
+      const d = await res.json();
+      setSteamMe(
+        d?.ok
+          ? {
+              username: d.profile?.username ?? null,
+              avatarUrl: d.profile?.avatarUrl ?? null,
+              level: d.profile?.level ?? null,
+              premierRating: d.premierRating ?? null,
+              trust: d.trust ?? null,
+              bans: d.bans ?? null,
+              record: d.record ?? undefined,
+            }
+          : null,
+      );
+    } catch {
+      setSteamMe(null);
+    } finally {
+      setSteamMeLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tracked) void loadTrackedMe(tracked);
+    else setSteamMe(null);
+  }, [tracked, loadTrackedMe]);
 
   const [loginState, setLoginState] = useState<LoginState>("idle");
   const [loginMsg, setLoginMsg] = useState("");
@@ -1184,166 +1242,132 @@ function SettingsModal({
                 Steam / live feed
               </p>
 
-              {/* QR login — primary, mirrors the website. Scans from the Steam app. */}
-              <div className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                {qrDataUrl ? (
-                  <div className="flex flex-col items-center gap-2.5">
-                    <img
-                      src={qrDataUrl}
-                      alt="Steam login QR code"
-                      className="h-40 w-40 rounded-lg bg-white"
-                    />
-                    <p className="text-center text-[11px] leading-relaxed text-zinc-400">
-                      Open the Steam app → <span className="text-zinc-200">Add a new device</span> → scan this code,
-                      then approve on your phone. No codes to type — everything is filled in automatically and the live feed starts on its own.
+              {tracked ? (
+                /* Signed in — show ONLY the profile card, everything else hidden. */
+                <div className="space-y-2.5">
+                  <div className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-void-950">
+                        {steamMe?.avatarUrl ? (
+                          <img src={steamMe.avatarUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-base font-bold text-electric-300">
+                            {cleanName((steamMe?.username as string) || tracked).charAt(0).toUpperCase() || "?"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-zinc-100">{cleanName((steamMe?.username as string) || tracked)}</p>
+                        <p className="font-mono text-[10px] tabular-nums text-zinc-500">{tracked}</p>
+                      </div>
+                      <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                        Linked
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      <Stat label="Level" value={steamMe?.level != null ? String(steamMe.level) : null} />
+                      <Stat label="Premier" value={steamMe?.premierRating != null ? String(steamMe.premierRating) : null} />
+                      <Stat
+                        label="Record"
+                        value={
+                          steamMe?.record
+                            ? `${steamMe.record.wins}-${steamMe.record.losses}-${steamMe.record.ties}`
+                            : null
+                        }
+                      />
+                    </div>
+
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                      {steamMe?.trust?.value != null && (
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-zinc-300">
+                          Trust {steamMe.trust.value}%
+                        </span>
+                      )}
+                      {steamMe?.bans?.vac ? (
+                        <span className="rounded-full border border-red-400/30 bg-red-400/10 px-2.5 py-0.5 text-[10px] font-medium text-red-300">
+                          VAC ×{steamMe.bans.vac}
+                        </span>
+                      ) : null}
+                      {steamMe?.bans?.game ? (
+                        <span className="rounded-full border border-red-400/30 bg-red-400/10 px-2.5 py-0.5 text-[10px] font-medium text-red-300">
+                          GAME ×{steamMe.bans.game}
+                        </span>
+                      ) : null}
+                      {steamMe && !steamMe.bans?.vac && !steamMe.bans?.game && (
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-zinc-400">
+                          No bans
+                        </span>
+                      )}
+                    </div>
+
+                    {steamMeLoading && (
+                      <p className="mt-2.5 text-[11px] text-zinc-500">Loading your match data…</p>
+                    )}
+                    <p className="mt-2.5 text-[11px] leading-relaxed text-zinc-500">
+                      Your Steam account is linked. The live feed is running and your profile stays synced with the
+                      website while you play.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => startQr(false)}
-                      className="rounded-lg border border-white/10 px-3 py-1.5 text-[11px] font-medium text-zinc-300 transition hover:border-white/25 hover:text-white"
-                    >
-                      Get a fresh QR code
-                    </button>
                   </div>
-                ) : qrLoading ? (
-                  <div className="flex flex-col items-center gap-2.5 py-2">
-                    <div className="h-16 w-16 animate-pulse rounded-lg border border-white/10 bg-black/40">
-                      <span className="flex h-full w-full animate-spin items-center justify-center">
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTracked("");
+                      setSteamMe(null);
+                      setGcAccount("");
+                      setGcRefresh("");
+                      if (api) api.saveSettings({ steam: { trackedSteam64: "" } }).catch(() => {});
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-medium text-zinc-400 transition hover:border-red-400/40 hover:text-red-300"
+                  >
+                    Disconnect Steam account
+                  </button>
+                </div>
+              ) : (
+                /* Not linked — QR is the only option. */
+                <div className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                  {qrDataUrl ? (
+                    <div className="flex flex-col items-center gap-2.5">
+                      <img src={qrDataUrl} alt="Steam login QR code" className="h-40 w-40 rounded-lg bg-white" />
+                      <p className="text-center text-[11px] leading-relaxed text-zinc-400">
+                        Open the Steam app → <span className="text-zinc-200">Add a new device</span> → scan this code,
+                        then approve on your phone. No codes to type — everything is filled in automatically and the live feed starts on its own.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => startQr(false)}
+                        className="rounded-lg border border-white/10 px-3 py-1.5 text-[11px] font-medium text-zinc-300 transition hover:border-white/25 hover:text-white"
+                      >
+                        Get a fresh QR code
+                      </button>
+                    </div>
+                  ) : qrLoading ? (
+                    <div className="flex flex-col items-center gap-2.5 py-2">
+                      <span className="flex h-16 w-16 animate-spin items-center justify-center">
                         <svg viewBox="0 0 24 24" width="30" height="30" fill="none" className="text-electric-300">
                           <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.25" />
                           <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                         </svg>
                       </span>
+                      <p className="text-[11px] text-zinc-400">Generating login code…</p>
                     </div>
-                    <p className="text-[11px] text-zinc-400">Generating login code…</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2.5 py-1">
-                    <button
-                      type="button"
-                      onClick={() => startQr(false)}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-electric-400/25 bg-electric-400/10 px-3 py-2.5 text-sm font-semibold text-electric-200 transition hover:border-electric-400/50"
-                    >
-                      Show QR code
-                    </button>
-                    <p className="text-center text-[11px] leading-relaxed text-zinc-400">
-                      Scan it in the Steam app to link this account — no codes to type.
-                    </p>
-                  </div>
-                )}
-                {qrMsg && <p className="mt-2 rounded-lg bg-red-400/10 px-3 py-1.5 text-[11px] text-red-300">{qrMsg}</p>}
-              </div>
-
-              <div className="h-px bg-white/5" />
-
-              {/* One-click alternative: Steam client already on this PC */}
-              <button
-                type="button"
-                onClick={loginViaClient}
-                disabled={clientState === "loading"}
-                className={`flex w-full items-center justify-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm font-semibold transition disabled:opacity-70 ${loginStyles[clientState]}`}
-              >
-                <img
-                  src="https://cdn.reicon.dev/logos/steam/original.svg"
-                  alt="Steam"
-                  width={20}
-                  height={20}
-                  className="h-5 w-5 shrink-0"
-                />
-                {clientState === "loading"
-                  ? "Connecting…"
-                  : clientState === "ok"
-                    ? "Connected ✓"
-                    : "Auto-login with Steam client"}
-              </button>
-              {clientMsg && (
-                <p
-                  className={`rounded-lg px-3 py-2 text-[11px] leading-relaxed ${
-                    clientState === "ok"
-                      ? "bg-emerald-400/10 text-emerald-300"
-                      : clientState === "guard" || clientState === "empty"
-                        ? "bg-amber-400/10 text-amber-200"
-                        : "bg-red-400/10 text-red-300"
-                  }`}
-                  aria-live="polite"
-                >
-                  {clientMsg}
-                </p>
-              )}
-              <p className="text-[11px] leading-relaxed text-zinc-500">
-                Uses the Steam you’re already logged into on this PC — no username or password needed.
-              </p>
-
-              <div className="h-px bg-white/5" />
-
-              {/* Manual account + password, plus optional codes — collapsed. */}
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-left text-xs font-medium text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
-              >
-                <span>Account + password (manual)</span>
-                <span className={`text-zinc-600 transition-transform ${showAdvanced ? "rotate-90" : ""}`}>›</span>
-              </button>
-
-              {showAdvanced && (
-                <div className="space-y-2.5">
-                  <Field label="GC account name" value={gcAccount} onChange={setGcAccount} placeholder="steam login" />
-                  <Field label="GC password" value={gcPassword} onChange={setGcPassword} placeholder="password" type="password" />
-                  <button
-                    type="button"
-                    onClick={loginSteam}
-                    disabled={loginState === "loading"}
-                    className={`flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition disabled:opacity-70 ${loginStyles[loginState]}`}
-                  >
-                    {loginState === "loading" ? "Waiting… approve the sign-in on your phone" : "Log in"}
-                  </button>
-                  {loginMsg && (
-                    <p
-                      className={`rounded-lg px-3 py-2 text-[11px] leading-relaxed ${
-                        loginState === "ok"
-                          ? "bg-emerald-400/10 text-emerald-300"
-                          : loginState === "guard" || loginState === "empty"
-                            ? "bg-amber-400/10 text-amber-200"
-                            : "bg-red-400/10 text-red-300"
-                      }`}
-                      aria-live="polite"
-                    >
-                      {loginMsg}
-                    </p>
-                  )}
-                  {loginState === "guard" && (
-                    <div className="flex gap-2">
-                      <input
-                        ref={guardInputRef}
-                        value={gcGuard}
-                        onChange={(e) => setGcGuard(e.target.value)}
-                        placeholder="Steam Guard code"
-                        spellCheck={false}
-                        className="min-w-0 flex-1 rounded-lg border border-amber-400/40 bg-black/50 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-amber-300/70"
-                      />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2.5 py-1">
                       <button
                         type="button"
-                        onClick={loginSteam}
-                        className="shrink-0 rounded-lg border border-amber-400/40 px-3.5 py-2 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/10"
+                        onClick={() => startQr(false)}
+                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-electric-400/25 bg-electric-400/10 px-3 py-2.5 text-sm font-semibold text-electric-200 transition hover:border-electric-400/50"
                       >
-                        Retry
+                        Show QR code
                       </button>
+                      <p className="text-center text-[11px] leading-relaxed text-zinc-400">
+                        Scan it in the Steam app to link this account — no codes to type.
+                      </p>
                     </div>
                   )}
-
-                  <div className="h-px bg-white/5" />
-
-                  <Field label="Steam Web API key" value={apiKey} onChange={setApiKey} placeholder="32 hex chars" />
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <Field label="Guard code" value={gcGuard} onChange={setGcGuard} placeholder="one-time (if asked)" />
-                    <Field label="2FA code" value={gc2fa} onChange={setGc2fa} placeholder="one-time (if asked)" />
-                  </div>
-                  <Field label="Track Steam64 (optional)" value={tracked} onChange={setTracked} placeholder="76561198…" />
-                  <p className="text-[11px] leading-relaxed text-zinc-500">
-                    If Steam Guard asks, approve it on your phone (the app waits for you) or paste the code that appears
-                    here. The API key is only used for profile look-ups; the tracked Steam64 is filled in automatically.
-                  </p>
+                  {qrMsg && <p className="mt-2 rounded-lg bg-red-400/10 px-3 py-1.5 text-[11px] text-red-300">{qrMsg}</p>}
                 </div>
               )}
             </section>

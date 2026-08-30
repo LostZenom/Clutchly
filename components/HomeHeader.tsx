@@ -77,14 +77,6 @@ export default function HomeHeader() {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STEAM64_KEY);
-    if (saved) {
-      setSignedIn(saved);
-      loadMe(saved);
-    }
-  }, [loadMe]);
-
-  useEffect(() => {
     const onDoc = (e: PointerEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     };
@@ -101,6 +93,19 @@ export default function HomeHeader() {
       setMe(d);
     }
   }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STEAM64_KEY);
+    if (saved) {
+      setSignedIn(saved);
+      loadMe(saved);
+    } else {
+      // No local sign-in, but the overlay app may have linked a Steam account
+      // (its QR login writes OVERLAY_TRACK_STEAM64 server-side) — mirror it here
+      // so the website shows the same signed-in profile as the overlay.
+      refreshFromEnv();
+    }
+  }, [loadMe, refreshFromEnv]);
 
   const allSteam64 = me?.steam64 ?? signedIn;
 

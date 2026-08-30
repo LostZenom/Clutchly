@@ -70,7 +70,8 @@ await build({
     },
     nsis: {
       shortcutName: "Clutchly Overlay",
-      artifactName: "Clutchly Overlay-Setup-${version}.${ext}",
+      // Space-free on purpose: latest.yml must match the uploaded asset name exactly.
+      artifactName: "ClutchlyOverlay-Setup-${version}.${ext}",
     },
   },
 });

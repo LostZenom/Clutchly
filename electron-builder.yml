@@ -52,5 +52,6 @@ nsis:
   oneClick: true
   perMachine: false
   allowToChangeInstallationDirectory: false
-  artifactName: ${productName}-Setup-${version}.${ext}
+  # Space-free on purpose: latest.yml must match the uploaded asset name exactly.
+  artifactName: ClutchlyOverlay-Setup-${version}.${ext}
   shortcutName: Clutchly Overlay

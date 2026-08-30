@@ -8,9 +8,10 @@
  *
  * Run AFTER `next build`:  `node scripts/package-site.mjs`
  */
-import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const standalone = join(root, ".next", "standalone");
@@ -46,7 +47,47 @@ if (existsSync(join(root, ".env"))) {
   console.log("  ✓ .env");
 }
 
-// 4. Local SQLite database, if this project uses one.
+// 4. Runtime packages Next's trace misses. `next build` output-file-tracing
+//    does NOT always include the transitive dependencies of server-external
+//    packages (e.g. steam-user → lzma, qrcode), so routes like
+//    /api/overlay/login-qr 500 with MODULE_NOT_FOUND in the packaged app.
+//    Copy the full dependency closure of every package the server needs from
+//    the project node_modules so those routes work in the shipped site.
+const RUNTIME_PACKAGES = ["steam-user", "steam-session", "node-cs2", "qrcode", "steamid"];
+const req = createRequire(import.meta.url);
+const standaloneNodeModules = join(standalone, "node_modules");
+mkdirSync(standaloneNodeModules, { recursive: true });
+
+/** Recursively copy a package + its dependencies into the standalone. */
+function copyPackageTree(pkgName, seen = new Set()) {
+  if (seen.has(pkgName)) return;
+  seen.add(pkgName);
+  let pkgJsonPath;
+  try {
+    pkgJsonPath = req.resolve(`${pkgName}/package.json`, { paths: [root, standaloneNodeModules] });
+  } catch {
+    console.log(`  ! could not resolve ${pkgName} — skipped`);
+    return;
+  }
+  const srcDir = dirname(pkgJsonPath);
+  const destDir = join(standaloneNodeModules, pkgName);
+  if (existsSync(srcDir)) {
+    cpSync(srcDir, destDir, { recursive: true, force: true });
+    console.log(`  ✓ ${pkgName}`);
+  }
+  let meta = {};
+  try {
+    meta = JSON.parse(readFileSync(pkgJsonPath, "utf8"));
+  } catch {
+    /* ignore */
+  }
+  const deps = { ...(meta.dependencies || {}), ...(meta.optionalDependencies || {}) };
+  for (const dep of Object.keys(deps)) copyPackageTree(dep, seen);
+}
+
+for (const pkg of RUNTIME_PACKAGES) copyPackageTree(pkg);
+
+// 5. Local SQLite database, if this project uses one.
 for (const db of ["prisma/dev.db", "prisma/clutchly.db", "data.db"]) {
   if (existsSync(join(root, db))) {
     mkdirSync(dirname(join(standalone, db)), { recursive: true });
@@ -55,7 +96,7 @@ for (const db of ["prisma/dev.db", "prisma/clutchly.db", "data.db"]) {
   }
 }
 
-// 5. Prune a known waste: /api/overlay/download reads `dist/`, so Next's
+// 6. Prune a known waste: /api/overlay/download reads `dist/`, so Next's
 //    standalone trace copies our whole electron-builder output (including a full
 //    Electron runtime) into the payload and then re-includes it on every build.
 //    Drop it from the staged payload — the packaged app no longer needs it.

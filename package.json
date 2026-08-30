@@ -1,6 +1,6 @@
 {
   "name": "clutchly-cs2",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "private": true,
   "main": "electron/main.cjs",
   "description": "A premium, fully-functional CS2 match tracking platform (cstracker.gg alternative) — Steam API, .dem parsing, chat archive, teammates, and server location tracking.",

@@ -11,7 +11,6 @@ const path = require("path");
 const { app, ipcMain, screen, BrowserWindow, Notification, shell } = require("electron");
 
 let updateWin = null;
-let closeTimer = null;
 
 // Only require the updater when packaged (no-op in dev).
 function requireUpdater() {
@@ -68,33 +67,21 @@ function broadcast(payload) {
   }
 }
 
-function scheduleClose(ms) {
-  if (closeTimer) clearTimeout(closeTimer);
-  closeTimer = setTimeout(() => {
-    closeUpdateWindow();
-    closeTimer = null;
-  }, ms);
-}
-
 function closeUpdateWindow() {
-  if (closeTimer) {
-    clearTimeout(closeTimer);
-    closeTimer = null;
-  }
   if (updateWin && !updateWin.isDestroyed()) {
     updateWin.close();
   }
 }
 
-/** Small transparent toast pinned to the bottom-right of the screen. */
+/** Small toast pinned to the bottom-right of the screen. */
 function showUpdateWindow() {
   if (updateWin && !updateWin.isDestroyed()) {
     updateWin.show();
     return;
   }
   const wa = screen.getPrimaryDisplay().workArea;
-  const w = 404;
-  const h = 264;
+  const w = 372;
+  const h = 244;
   updateWin = new BrowserWindow({
     width: w,
     height: h,
@@ -138,8 +125,8 @@ function registerUpdaterIpc() {
   ipcMain.handle("updater:set-size", (_e, w, h) => {
     if (!updateWin || updateWin.isDestroyed()) return { ok: false };
     const wa = screen.getPrimaryDisplay().workArea;
-    const width = Math.max(320, Math.min(520, Number(w) || 404));
-    const height = Math.max(200, Math.min(520, Number(h) || 264));
+    const width = Math.max(320, Math.min(520, Number(w) || 372));
+    const height = Math.max(200, Math.min(520, Number(h) || 244));
     updateWin.setBounds({
       width,
       height,
@@ -226,7 +213,7 @@ function setupAutoUpdate() {
   });
   autoUpdater.on("update-not-available", () => {
     broadcast({ status: "none" });
-    scheduleClose(2600);
+    // Stay open so the user can inspect version history; only the ✕ closes it.
   });
   autoUpdater.on("download-progress", (p) => {
     showUpdateWindow();

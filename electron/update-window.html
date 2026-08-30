@@ -20,141 +20,161 @@
         display: flex;
         align-items: flex-end;
         justify-content: flex-end;
-        padding: 16px;
         -webkit-user-select: none;
         user-select: none;
+        color: #eef0f3;
       }
 
-      /* Rotating comet ring — no masks, guaranteed to render. */
-      .border {
+      /*
+        Signatare shimmer card — identical to the home page's ShimmerCard:
+        opaque clean interior with a 1px animated blue→purple arc border.
+        The ::after mask keeps the spinning arc ONLY on the edge ring, so the
+        middle never shows any rotating colour.
+      */
+      .toast {
         position: relative;
-        width: 384px;
+        isolation: isolate;
         border-radius: 8px;
-        padding: 1.5px;
         overflow: hidden;
-        background: rgba(255, 255, 255, 0.1);
-        box-shadow:
-          0 24px 60px rgba(0, 0, 0, 0.5),
-          0 0 34px rgba(76, 194, 255, 0.14);
+        background: #0b0c0e;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        width: 100%;
+        height: 100%;
       }
-      .border::before {
+      /* Spinning arc — never visible except through the 1px ring. */
+      .toast::before {
         content: "";
         position: absolute;
-        inset: -160%;
+        inset: -200%;
+        z-index: -2;
         background: conic-gradient(
-          from 0deg,
+          from 0deg at 50% 50%,
           transparent 0deg,
-          rgba(76, 194, 255, 0.04) 35deg,
-          #9fe6ff 95deg,
-          #4cc2ff 130deg,
-          rgba(76, 194, 255, 0.05) 195deg,
-          rgba(255, 255, 255, 0.14) 300deg,
+          transparent 120deg,
+          #38bdf8 150deg,
+          #a855f7 195deg,
+          transparent 230deg,
           transparent 360deg
         );
-        animation: orbit 2.6s linear infinite;
-        pointer-events: none;
+        animation: shimmer-rotate 7s linear infinite;
       }
-      @keyframes orbit {
+      /* Opaque mask inset 1px: only the border shimmers. */
+      .toast::after {
+        content: "";
+        position: absolute;
+        inset: 1px;
+        z-index: -1;
+        border-radius: 7px;
+        background: #0b0c0e;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      @keyframes shimmer-rotate {
         to {
           transform: rotate(360deg);
         }
       }
 
-      .body {
+      .content {
         position: relative;
-        border-radius: 6.5px;
-        background: linear-gradient(165deg, rgba(24, 28, 34, 0.82), rgba(11, 13, 17, 0.8));
-        backdrop-filter: blur(24px) saturate(1.3);
-        -webkit-backdrop-filter: blur(24px) saturate(1.3);
-        padding: 16px 18px 13px;
+        z-index: 1;
+        padding: 14px 16px 12px;
       }
 
       .head {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 11px;
+        margin-bottom: 10px;
       }
       .brand {
         display: flex;
         align-items: center;
-        gap: 9px;
+        gap: 8px;
+        min-width: 0;
       }
       .logo {
-        width: 22px;
-        height: 22px;
-        border-radius: 6px;
+        width: 20px;
+        height: 20px;
+        border-radius: 5px;
         object-fit: contain;
+        flex: none;
       }
       .brand b {
-        font-size: 13.5px;
-        letter-spacing: 0.03em;
-        color: #f7f9fb;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        color: #f5f7f9;
+        white-space: nowrap;
       }
       .ver-tag {
-        margin-left: 2px;
+        margin-left: 1px;
         font-size: 10px;
         font-weight: 500;
-        color: #7f8892;
+        color: #7d8691;
         letter-spacing: 0.04em;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.09);
         border-radius: 6px;
-        padding: 2px 7px;
+        padding: 1.5px 7px;
         font-variant-numeric: tabular-nums;
       }
+      /* Tiny bold X — no box, just the glyph. */
       .close {
+        background: transparent;
+        border: none;
+        padding: 0;
+        width: 22px;
+        height: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(255, 255, 255, 0.04);
-        color: #dfe4ea;
-        width: 25px;
-        height: 25px;
-        border-radius: 7px;
-        cursor: pointer;
+        color: #8b949f;
         font-size: 14px;
         font-weight: 700;
         line-height: 1;
-        transition: all 0.16s ease;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: color 0.14s ease, background 0.14s ease;
+        flex: none;
       }
       .close:hover {
         color: #fff;
-        border-color: rgba(255, 255, 255, 0.35);
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.06);
       }
 
-      .title {
-        font-size: 14px;
-        font-weight: 600;
-        letter-spacing: 0.01em;
-        color: #f5f7f9;
+      .row {
         display: flex;
         align-items: center;
         gap: 8px;
       }
+      .title {
+        font-size: 13.5px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        color: #f2f4f6;
+      }
       .pill {
-        font-size: 9.5px;
+        font-size: 9px;
         font-weight: 600;
         letter-spacing: 0.09em;
         text-transform: uppercase;
-        color: #8fe0ff;
-        background: rgba(76, 194, 255, 0.12);
-        border: 1px solid rgba(76, 194, 255, 0.32);
+        color: #7dd3fc;
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.32);
         border-radius: 99px;
-        padding: 2.5px 9px;
+        padding: 1.5px 8px;
+        font-variant-numeric: tabular-nums;
       }
       .status {
-        margin: 4px 0 13px;
-        font-size: 12px;
-        color: #a7b0ba;
-        min-height: 17px;
-        line-height: 1.5;
+        margin: 3px 0 12px;
+        font-size: 11.5px;
+        color: #9aa3af;
+        min-height: 16px;
+        line-height: 1.45;
       }
 
       .bar {
-        height: 5px;
+        height: 4px;
         border-radius: 99px;
         background: rgba(255, 255, 255, 0.07);
         box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -164,8 +184,8 @@
         height: 100%;
         width: 0%;
         border-radius: 99px;
-        background: linear-gradient(90deg, #2f9bd8, #4cc2ff, #8fe0ff);
-        box-shadow: 0 0 14px rgba(76, 194, 255, 0.8);
+        background: linear-gradient(90deg, #38bdf8, #a855f7);
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
         transition: width 0.25s ease;
       }
 
@@ -173,9 +193,9 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 7px;
-        font-size: 10.5px;
-        color: #6e7782;
+        margin-top: 6px;
+        font-size: 10px;
+        color: #6f7883;
         font-variant-numeric: tabular-nums;
         letter-spacing: 0.02em;
       }
@@ -183,50 +203,34 @@
       .actions {
         display: flex;
         justify-content: flex-end;
-        gap: 10px;
-        margin-top: 14px;
+        gap: 9px;
+        margin-top: 12px;
       }
       button.action {
-        position: relative;
-        overflow: hidden;
         border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.05);
-        color: #d9dde2;
-        font-size: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: #0f1115;
+        color: #cdd3da;
+        font-size: 11.5px;
         font-weight: 500;
         letter-spacing: 0.01em;
-        padding: 8px 16px;
+        padding: 7px 14px;
         cursor: pointer;
-        transition: all 0.16s ease;
+        transition: all 0.15s ease;
       }
       button.action:hover {
-        border-color: rgba(255, 255, 255, 0.32);
-        background: rgba(255, 255, 255, 0.09);
+        border-color: rgba(255, 255, 255, 0.28);
         color: #fff;
       }
       button.primary {
-        border-color: rgba(76, 194, 255, 0.5);
-        background: linear-gradient(135deg, rgba(76, 194, 255, 0.92), rgba(47, 155, 216, 0.92));
-        color: #051420;
+        border-color: rgba(56, 189, 248, 0.45);
+        background: #0e2436;
+        color: #aef0ff;
         font-weight: 600;
       }
-      button.primary::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
-        background-size: 220% 100%;
-        animation: sweep 2.3s linear infinite;
-        pointer-events: none;
-      }
-      @keyframes sweep {
-        0% {
-          background-position: 130% 0;
-        }
-        100% {
-          background-position: -130% 0;
-        }
+      button.primary:hover {
+        border-color: rgba(56, 189, 248, 0.8);
+        background: #12334c;
       }
       button:disabled {
         opacity: 0.55;
@@ -236,11 +240,11 @@
         display: none !important;
       }
 
-      /* Version picker */
+      /* Previous versions */
       .picker {
-        margin-top: 13px;
+        margin-top: 11px;
         border-top: 1px solid rgba(255, 255, 255, 0.07);
-        padding-top: 10px;
+        padding-top: 9px;
       }
       .picker-toggle {
         width: 100%;
@@ -249,11 +253,11 @@
         justify-content: space-between;
         background: transparent;
         border: none;
-        color: #8a93a0;
-        font-size: 11px;
+        color: #838c97;
+        font-size: 10.5px;
         font-weight: 500;
         letter-spacing: 0.02em;
-        padding: 4px 2px;
+        padding: 3px 2px;
         cursor: pointer;
         transition: color 0.15s ease;
       }
@@ -263,7 +267,7 @@
       .picker-toggle .chev {
         font-size: 10px;
         transition: transform 0.2s ease;
-        color: #5d6672;
+        color: #5a636e;
       }
       .picker-toggle.open .chev {
         transform: rotate(90deg);
@@ -274,14 +278,14 @@
         transition: max-height 0.25s ease;
       }
       .picker-list.open {
-        max-height: 168px;
+        max-height: 158px;
         overflow-y: auto;
       }
       .picker-list::-webkit-scrollbar {
-        width: 5px;
+        width: 4px;
       }
       .picker-list::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.14);
         border-radius: 99px;
       }
       .ver-row {
@@ -289,7 +293,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 8px;
-        padding: 7px 8px;
+        padding: 7px 9px;
         border-radius: 7px;
         margin-top: 3px;
         background: rgba(255, 255, 255, 0.03);
@@ -302,7 +306,7 @@
         font-variant-numeric: tabular-nums;
       }
       .ver-row .m {
-        font-size: 10px;
+        font-size: 9.5px;
         color: #6e7782;
         margin-top: 1px;
       }
@@ -311,7 +315,7 @@
         background: rgba(255, 255, 255, 0.04);
         color: #aab3be;
         border-radius: 6px;
-        font-size: 10.5px;
+        font-size: 10px;
         font-weight: 500;
         padding: 4px 10px;
         cursor: pointer;
@@ -336,8 +340,8 @@
     </style>
   </head>
   <body>
-    <div class="border">
-      <div class="body">
+    <div class="toast">
+      <div class="content">
         <div class="head">
           <div class="brand">
             <img class="logo" src="./clutchly-logo.png" alt="" />
@@ -347,14 +351,13 @@
           <button class="close" id="close" aria-label="Close">✕</button>
         </div>
 
-        <div class="title">
-          <span id="title">Update</span>
+        <div class="row">
+          <span class="title" id="title">Update</span>
           <span class="pill" id="pill">checking</span>
         </div>
         <div class="status" id="status">Checking for updates…</div>
 
         <div class="bar"><div class="fill" id="fill"></div></div>
-
         <div class="meta">
           <span id="left">Preparing…</span>
           <span id="right"></span>
@@ -366,7 +369,6 @@
           <button class="action hidden" id="retry">Check again</button>
         </div>
 
-        <!-- Previous versions (rollback) -->
         <div class="picker">
           <button class="picker-toggle" id="pickertoggle">
             <span>Previous versions</span>
@@ -525,8 +527,7 @@
           pickerToggle.addEventListener("click", () => {
             const open = pickerList.classList.toggle("open");
             pickerToggle.classList.toggle("open", open);
-            // Grow the toast so the list fits; collapse it back when closed.
-            window.updater.setSize(404, open ? 352 : 264);
+            window.updater.setSize(372, open ? 392 : 244);
             if (open && !pickerList.childElementCount) {
               pickerList.textContent = "";
               const loading = document.createElement("p");

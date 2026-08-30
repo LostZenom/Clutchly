@@ -190,7 +190,7 @@ function createTray() {
     { type: "separator" },
     {
       label: "Check for updates…",
-      click: () => updater.check().catch(() => {}),
+      click: () => updater.check(true).catch(() => {}),
     },
     { label: "Reload overlay", click: () => win && win.webContents.reload() },
     { type: "separator" },

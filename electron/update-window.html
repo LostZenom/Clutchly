@@ -9,11 +9,16 @@
     <title>Clutchly — Update</title>
     <style>
       :root {
-        --bg: #101114;
+        --bg: rgba(9, 11, 14, 0.92);
         --line: rgba(255, 255, 255, 0.1);
-        --muted: #9ca3af;
+        --muted: #9aa3af;
         --accent: #4cc2ff;
         --accent-2: #2f9bd8;
+      }
+      @property --angle {
+        syntax: "<angle>";
+        initial-value: 0deg;
+        inherits: false;
       }
       * {
         box-sizing: border-box;
@@ -25,27 +30,63 @@
         background: transparent;
         height: 100vh;
         display: flex;
-        align-items: center;
-        justify-content: center;
+        align-items: flex-end;
+        justify-content: flex-end;
+        padding: 14px;
         -webkit-user-select: none;
         user-select: none;
       }
+
+      /* Shimmering rotating border ring around the toast. */
       .card {
-        width: 420px;
+        position: relative;
+        width: 376px;
         border-radius: 8px;
-        border: 1px solid var(--line);
-        background: rgba(16, 17, 20, 0.98);
-        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
-        padding: 20px 22px 16px;
+        background: var(--bg);
+        backdrop-filter: blur(14px);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+        overflow: hidden;
       }
-      .drag {
-        -webkit-app-region: drag;
+      .card::before {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        border-radius: 10px;
+        padding: 2px;
+        background: conic-gradient(
+          from var(--angle),
+          transparent 0deg,
+          rgba(76, 194, 255, 0) 60deg,
+          rgba(76, 194, 255, 0.95) 130deg,
+          rgba(47, 155, 216, 0.55) 180deg,
+          transparent 250deg,
+          rgba(255, 255, 255, 0.25) 330deg,
+          transparent 360deg
+        );
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        animation: spin 3.2s linear infinite;
+        pointer-events: none;
+        z-index: 1;
       }
+      @keyframes spin {
+        to {
+          --angle: 360deg;
+        }
+      }
+
+      .inner {
+        position: relative;
+        z-index: 2;
+        padding: 16px 18px 14px;
+      }
+
       .head {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 14px;
+        margin-bottom: 10px;
       }
       .brand {
         display: flex;
@@ -53,10 +94,21 @@
         gap: 8px;
       }
       .dot {
-        width: 10px;
-        height: 10px;
+        width: 9px;
+        height: 9px;
         border-radius: 50%;
         background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        box-shadow: 0 0 10px rgba(76, 194, 255, 0.8);
+        animation: pulse 2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.45;
+        }
       }
       .brand b {
         font-size: 13px;
@@ -65,22 +117,24 @@
       }
       .close {
         border: 1px solid var(--line);
-        background: transparent;
-        color: #71717a;
+        background: rgba(255, 255, 255, 0.04);
+        color: #82878f;
         width: 24px;
         height: 24px;
-        border-radius: 6px;
+        border-radius: 7px;
         cursor: pointer;
         font-size: 13px;
         line-height: 1;
-        -webkit-app-region: no-drag;
+        transition: 0.15s ease;
       }
       .close:hover {
         color: #fff;
-        border-color: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.08);
       }
+
       .title {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 600;
         color: #f4f4f5;
         display: flex;
@@ -94,18 +148,20 @@
         text-transform: uppercase;
         color: var(--accent);
         background: rgba(76, 194, 255, 0.12);
-        border: 1px solid rgba(76, 194, 255, 0.25);
+        border: 1px solid rgba(76, 194, 255, 0.3);
         border-radius: 99px;
         padding: 2px 8px;
       }
       .status {
-        margin: 6px 0 16px;
+        margin: 4px 0 13px;
         font-size: 12px;
         color: var(--muted);
         min-height: 16px;
+        line-height: 1.45;
       }
+
       .bar {
-        height: 7px;
+        height: 6px;
         border-radius: 99px;
         background: rgba(255, 255, 255, 0.08);
         overflow: hidden;
@@ -115,43 +171,66 @@
         width: 0%;
         border-radius: 99px;
         background: linear-gradient(90deg, var(--accent-2), var(--accent));
-        transition: width 0.2s ease;
+        box-shadow: 0 0 12px rgba(76, 194, 255, 0.7);
+        transition: width 0.25s ease;
       }
+
       .meta {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 8px;
+        margin-top: 7px;
         font-size: 11px;
-        color: #71717a;
+        color: #6f7780;
         font-variant-numeric: tabular-nums;
       }
+
       .actions {
         display: flex;
         justify-content: flex-end;
         gap: 10px;
-        margin-top: 18px;
+        margin-top: 14px;
       }
       button.action {
-        -webkit-app-region: no-drag;
+        position: relative;
+        overflow: hidden;
         border-radius: 8px;
         border: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.05);
-        color: #d4d4d8;
+        color: #d7dbe0;
         font-size: 12px;
         font-weight: 500;
-        padding: 7px 14px;
+        padding: 8px 15px;
         cursor: pointer;
+        transition: 0.15s ease;
       }
       button.action:hover {
-        border-color: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.09);
         color: #fff;
       }
       button.primary {
-        border-color: transparent;
-        background: linear-gradient(135deg, var(--accent), var(--accent-2));
-        color: #07151f;
+        border-color: rgba(76, 194, 255, 0.45);
+        background: linear-gradient(135deg, rgba(76, 194, 255, 0.9), rgba(47, 155, 216, 0.9));
+        color: #06131d;
         font-weight: 600;
+      }
+      button.primary::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.5) 50%, transparent 68%);
+        background-size: 220% 100%;
+        animation: sweep 2.4s linear infinite;
+        pointer-events: none;
+      }
+      @keyframes sweep {
+        0% {
+          background-position: 130% 0;
+        }
+        100% {
+          background-position: -130% 0;
+        }
       }
       button:disabled {
         opacity: 0.5;
@@ -163,29 +242,34 @@
     </style>
   </head>
   <body>
-    <div class="card drag">
-      <div class="head">
-        <div class="brand">
-          <span class="dot"></span>
-          <b>Clutchly</b>
+    <div class="card">
+      <div class="inner">
+        <div class="head">
+          <div class="brand">
+            <span class="dot"></span>
+            <b>Clutchly</b>
+          </div>
+          <button class="close" id="close" aria-label="Close">✕</button>
         </div>
-        <button class="close" id="close" aria-label="Close">✕</button>
-      </div>
 
-      <div class="title">Update available <span class="pill" id="pill">new</span></div>
-      <div class="status" id="status">Checking for updates…</div>
+        <div class="title">
+          <span id="title">Update</span>
+          <span class="pill" id="pill">checking</span>
+        </div>
+        <div class="status" id="status">Checking for updates…</div>
 
-      <div class="bar"><div class="fill" id="fill"></div></div>
+        <div class="bar"><div class="fill" id="fill"></div></div>
 
-      <div class="meta">
-        <span id="left">Preparing…</span>
-        <span id="right"></span>
-      </div>
+        <div class="meta">
+          <span id="left">Preparing…</span>
+          <span id="right"></span>
+        </div>
 
-      <div class="actions">
-        <button class="action hidden" id="cancel">Later</button>
-        <button class="action primary hidden" id="install">Restart now</button>
-        <button class="action hidden" id="retry">Check again</button>
+        <div class="actions">
+          <button class="action hidden" id="cancel">Later</button>
+          <button class="action primary hidden" id="install">Restart now</button>
+          <button class="action hidden" id="retry">Check again</button>
+        </div>
       </div>
     </div>
 
@@ -194,6 +278,7 @@
         const $ = (id) => document.getElementById(id);
         const fill = $("fill");
         const status = $("status");
+        const title = $("title");
         const left = $("left");
         const right = $("right");
         const installBtn = $("install");
@@ -210,24 +295,28 @@
         function render(s) {
           if (s.status === "checking") {
             hideAllButtons();
+            title.textContent = "Checking for updates";
             pill.textContent = "checking";
-            status.textContent = "Checking for updates…";
-            left.textContent = "Clutchly looks for the latest build";
+            status.textContent = "Clutchly looks for the latest build on GitHub…";
+            left.textContent = "Please wait";
             right.textContent = "";
             fill.style.width = "0%";
           } else if (s.status === "available") {
             hideAllButtons();
             cancelBtn.classList.remove("hidden");
+            title.textContent = "Update available";
             pill.textContent = "v" + (s.version || "new");
-            status.textContent = "A newer version is downloading — it installs itself automatically.";
-            left.textContent = "Downloading…";
+            status.textContent = "Downloading in the background — you'll see it right here.";
+            left.textContent = "Starting download…";
             right.textContent = "";
           } else if (s.status === "downloading") {
             hideAllButtons();
             cancelBtn.classList.remove("hidden");
             const pct = s.percent || 0;
             fill.style.width = pct + "%";
-            status.textContent = "Downloading update…";
+            title.textContent = "Updating Clutchly";
+            pill.textContent = pct + "%";
+            status.textContent = "Downloading the update — keep playing, it installs when ready.";
             left.textContent = pct + "%";
             if (s.total) {
               const mb = (b) => (b / 1048576).toFixed(1) + " MB";
@@ -238,19 +327,25 @@
           } else if (s.status === "downloaded") {
             hideAllButtons();
             installBtn.classList.remove("hidden");
+            title.textContent = "Ready to update";
             pill.textContent = "ready";
-            status.textContent = "Everything is downloaded and ready.";
+            status.textContent = "The new version is downloaded and ready to install.";
             left.textContent = "100%";
             right.textContent = "Tap Restart to finish";
             fill.style.width = "100%";
           } else if (s.status === "none") {
             hideAllButtons();
-            status.textContent = "You're on the latest version.";
-            left.textContent = "Clutchly is up to date";
+            title.textContent = "You're up to date";
+            pill.textContent = "latest";
+            status.textContent = "Clutchly is running the newest version.";
+            left.textContent = "All good ✓";
+            right.textContent = "";
           } else if (s.status === "error") {
             hideAllButtons();
             retryBtn.classList.remove("hidden");
-            status.textContent = "Could not check for updates.";
+            title.textContent = "Update check failed";
+            pill.textContent = "offline";
+            status.textContent = "Couldn't reach the update server.";
             left.textContent = s.message || "Something went wrong";
             right.textContent = "";
           }

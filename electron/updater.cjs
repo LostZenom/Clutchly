@@ -2,17 +2,16 @@
  * Auto-update manager for the Clutchly overlay.
  *
  * Uses electron-updater wired to the GitHub Releases feed baked into the build
- * (see electron-builder.yml `publish`). On launch (and from the tray) it checks
- * for a newer release; when one is found it opens a small transparent popup with
- * a live progress bar, downloads the new installer, and offers "Restart now" to
- * install. Updates ship to everyone automatically once a new GitHub release is
- * published.
+ * (see scripts/release.mjs). On launch it silently checks for a newer release;
+ * on a tray "Check for updates…" it opens the popup immediately. Whenever an
+ * update is available or downloading, a small transparent toast appears in the
+ * bottom-right corner with a live progress bar and a "Restart now" action.
  */
 const path = require("path");
 const { app, ipcMain, screen, BrowserWindow } = require("electron");
 
 let updateWin = null;
-let readyChannels = [];
+let closeTimer = null;
 
 // Only require the updater when packaged (no-op in dev).
 function requireUpdater() {
@@ -31,26 +30,38 @@ function broadcast(payload) {
   }
 }
 
+function scheduleClose(ms) {
+  if (closeTimer) clearTimeout(closeTimer);
+  closeTimer = setTimeout(() => {
+    closeUpdateWindow();
+    closeTimer = null;
+  }, ms);
+}
+
 function closeUpdateWindow() {
+  if (closeTimer) {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+  }
   if (updateWin && !updateWin.isDestroyed()) {
     updateWin.close();
   }
 }
 
+/** Small transparent toast pinned to the bottom-right of the screen. */
 function showUpdateWindow() {
   if (updateWin && !updateWin.isDestroyed()) {
     updateWin.show();
-    updateWin.focus();
     return;
   }
   const wa = screen.getPrimaryDisplay().workArea;
-  const w = 440;
-  const h = 268;
+  const w = 404;
+  const h = 236;
   updateWin = new BrowserWindow({
     width: w,
     height: h,
-    x: wa.x + Math.round((wa.width - w) / 2),
-    y: wa.y + Math.round((wa.height - h) / 2),
+    x: wa.x + wa.width - w - 16,
+    y: wa.y + wa.height - h - 16,
     frame: false,
     transparent: true,
     backgroundColor: "#00000000",
@@ -70,10 +81,7 @@ function showUpdateWindow() {
   updateWin.loadFile(path.join(__dirname, "update-window.html")).catch((e) => {
     console.error("[updater] could not load update window:", e && e.message);
   });
-  updateWin.once("ready-to-show", () => {
-    updateWin.center();
-    updateWin.show();
-  });
+  updateWin.once("ready-to-show", () => updateWin.showInactive());
   updateWin.on("closed", () => {
     updateWin = null;
   });
@@ -99,8 +107,9 @@ function registerUpdaterIpc() {
 }
 
 /**
- * Initialize auto-updates. Safe to call in dev (resolves to a no-op).
- * Returns { check: () => Promise<void> } for manual tray-triggered checks.
+ * Initialize auto-updates. Safe to call in dev (no-op).
+ * Returns { check: (immediate?: boolean) => Promise<void> } — pass true from the
+ * tray so the toast appears even while it's just checking.
  */
 function setupAutoUpdate() {
   if (!app.isPackaged) {
@@ -117,9 +126,16 @@ function setupAutoUpdate() {
   autoUpdater.allowPrerelease = false;
 
   autoUpdater.on("checking-for-update", () => broadcast({ status: "checking" }));
-  autoUpdater.on("update-available", (info) => broadcast({ status: "available", version: info && info.version }));
-  autoUpdater.on("update-not-available", () => broadcast({ status: "none" }));
+  autoUpdater.on("update-available", (info) => {
+    showUpdateWindow();
+    broadcast({ status: "available", version: info && info.version });
+  });
+  autoUpdater.on("update-not-available", () => {
+    broadcast({ status: "none" });
+    scheduleClose(2600);
+  });
   autoUpdater.on("download-progress", (p) => {
+    showUpdateWindow();
     broadcast({
       status: "downloading",
       percent: Math.max(0, Math.min(100, Math.round((p && p.percent) || 0))),
@@ -128,6 +144,7 @@ function setupAutoUpdate() {
     });
   });
   autoUpdater.on("update-downloaded", (info) => {
+    showUpdateWindow();
     broadcast({ status: "downloaded", version: info && info.version });
   });
   autoUpdater.on("error", (e) => {
@@ -136,7 +153,8 @@ function setupAutoUpdate() {
   });
 
   return {
-    check: async () => {
+    check: async (immediate = false) => {
+      if (immediate) showUpdateWindow();
       try {
         await autoUpdater.checkForUpdates();
       } catch (e) {

@@ -242,6 +242,59 @@
         color: #fff;
       }
 
+      /* "Try another port" — quick restart without opening Settings */
+      .portrow {
+        margin-top: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .portrow .plabel {
+        font-size: 9.5px;
+        color: #98a2b0;
+        white-space: nowrap;
+      }
+      .portrow input {
+        width: 84px;
+        background: #0d0f13;
+        border: 1px solid rgba(125, 211, 252, 0.3);
+        border-radius: 7px;
+        color: #eef0f3;
+        font-size: 12px;
+        font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+        font-variant-numeric: tabular-nums;
+        padding: 5px 8px;
+        outline: none;
+        text-align: center;
+      }
+      .portrow input:focus {
+        border-color: rgba(56, 189, 248, 0.8);
+      }
+      .portrow input::-webkit-outer-spin-button,
+      .portrow input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      .portrow button {
+        border-radius: 7px;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        background: rgba(56, 189, 248, 0.12);
+        color: #aef0ff;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 5px 14px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .portrow button:hover:not(:disabled) {
+        background: rgba(56, 189, 248, 0.22);
+        border-color: rgba(56, 189, 248, 0.7);
+      }
+      .portrow button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+
       /* Bottom "what it's doing now" log console */
       .debug {
         position: absolute;
@@ -318,6 +371,11 @@
           <div class="sub" id="sub">Booting the local server…</div>
           <a class="url hidden" id="url" href="#"><span id="urltext"></span><span class="go">↗</span></a>
           <div class="errbox hidden" id="errbox"></div>
+          <div class="portrow hidden" id="portrow">
+            <span class="plabel">Restart on port</span>
+            <input id="portinput" type="number" min="1024" max="65535" inputmode="numeric" />
+            <button id="restartbtn" type="button">Start</button>
+          </div>
           <button class="closebtn hidden" id="closebtn">Close</button>
         </div>
 
@@ -342,6 +400,10 @@
         const errbox = $("errbox");
         const close = $("close");
         const closebtn = $("closebtn");
+        const portrow = $("portrow");
+        const portinput = $("portinput");
+        const restartbtn = $("restartbtn");
+        let lastErrorPort = 3100;
 
         function setState(s) {
           const data = s || {};
@@ -353,6 +415,9 @@
           errbox.classList.add("hidden");
           close.classList.add("hidden");
           closebtn.classList.add("hidden");
+          portrow.classList.add("hidden");
+          restartbtn.disabled = false;
+          restartbtn.textContent = "Start";
 
           if (data.status === "ok") {
             check.classList.remove("hidden");
@@ -371,6 +436,13 @@
             errbox.classList.remove("hidden");
             close.classList.remove("hidden");
             closebtn.classList.remove("hidden");
+
+            // Prefill a likely-free port and offer an instant restart.
+            lastErrorPort = data.port || lastErrorPort;
+            portinput.value = String(Math.min(65535, lastErrorPort + 5));
+            portrow.classList.remove("hidden");
+            restartbtn.disabled = false;
+            restartbtn.textContent = "Start";
           } else {
             spinner.classList.remove("hidden");
             title.textContent = "Starting Clutchly…";
@@ -395,6 +467,20 @@
         closebtn.addEventListener("click", () =>
           window.serverPopup ? window.serverPopup.close() : null
         );
+
+        restartbtn.addEventListener("click", () => {
+          const parsed = parseInt(portinput.value, 10);
+          const target = Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535 ? parsed : lastErrorPort + 1;
+          restartbtn.disabled = true;
+          restartbtn.textContent = "Restarting…";
+          if (window.serverPopup && window.serverPopup.tryPort) {
+            window.serverPopup.tryPort(target);
+          } else {
+            // preview fallback: simulate the request
+            setState({ status: "starting", port: target });
+            addLog("requested restart on port " + target);
+          }
+        });
 
         // ---- bottom debug console --------------------------------------
         const loglines = $("loglines");

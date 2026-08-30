@@ -28,6 +28,8 @@ const server = createServerManager({
     console.log(`[site] ${line}`);
     broadcastLog(line);
   },
+  // When auto-fallback picks a new port mid-boot, surface it in the popup.
+  onAttempt: (port) => showServerPopup("starting", { port }),
 });
 const updater = setupAutoUpdate();
 
@@ -208,6 +210,32 @@ function createTray() {
   tray.on("click", toggleInteractive);
 }
 
+/**
+ * Restart the built-in site on the given port, keeping every window and the
+ * server popup in sync. Used by Settings (port change) and the popup's
+ * "try another port" field.
+ */
+async function restartSiteOnPort(rawPort) {
+  const p = normalizePort(rawPort);
+  showServerPopup("starting", { port: p });
+  try {
+    const url = await server.restartServer(p);
+    const port = server.getPort();
+    showServerPopup("ok", { port, url: `${url}/` });
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) {
+        w.loadURL(w === settingsWin ? `${overlayUrl()}?settings=1` : overlayUrl()).catch(() => {});
+      }
+    }
+    return { ok: true, port, url };
+  } catch (e) {
+    console.error("[overlay] could not restart site:", e && e.message);
+    const message = (e && e.message) || "The website could not start on that port.";
+    showServerPopup("error", { port: p, message });
+    return { ok: false, message };
+  }
+}
+
 // ------------------------------------------------------------------ IPC
 function registerIpc() {
   ipcMain.handle("overlay:get-settings", () => loadSettings());
@@ -225,21 +253,7 @@ function registerIpc() {
       normalizePort(patch.serverPort) !== normalizePort(prev.serverPort)
     ) {
       needsRestart = true;
-      try {
-        await server.restartServer(patch.serverPort);
-        showServerPopup("ok", { port: normalizePort(patch.serverPort), url: `${server.currentUrl()}/` });
-        for (const w of BrowserWindow.getAllWindows()) {
-          if (!w.isDestroyed()) {
-            w.loadURL(w === settingsWin ? `${overlayUrl()}?settings=1` : overlayUrl()).catch(() => {});
-          }
-        }
-      } catch (e) {
-        console.error("[overlay] could not restart site on new port:", e && e.message);
-        showServerPopup("error", {
-          port: normalizePort(patch.serverPort),
-          message: (e && e.message) || "The website could not restart on that port.",
-        });
-      }
+      await restartSiteOnPort(patch.serverPort);
     }
     // Keep every window (main overlay + settings) in sync instantly.
     for (const w of BrowserWindow.getAllWindows()) {
@@ -256,6 +270,9 @@ function registerIpc() {
     openSettingsWindow();
     return { ok: true };
   });
+  // From the server popup's "try another port" field — restart the site on a
+  // new port without having to open Settings.
+  ipcMain.handle("serverpopup:try-port", (_e, rawPort) => restartSiteOnPort(rawPort));
 }
 
 // ------------------------------------------------------------------ lifecycle
@@ -274,7 +291,7 @@ if (!gotLock) {
     showServerPopup("starting", { port });
     try {
       const url = await server.ensureServer(port);
-      showServerPopup("ok", { port, url: `${url}/` });
+      showServerPopup("ok", { port: server.getPort(), url: `${url}/` });
     } catch (e) {
       console.error(`[overlay] could not boot the site on ${port}:`, e && e.message);
       showServerPopup("error", {

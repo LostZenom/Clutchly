@@ -14,4 +14,5 @@ contextBridge.exposeInMainWorld("serverPopup", {
   getLogs: () => ipcRenderer.invoke("serverpopup:get-logs"),
   close: () => ipcRenderer.invoke("serverpopup:close"),
   openUrl: (url) => ipcRenderer.invoke("serverpopup:open-url", url),
+  tryPort: (port) => ipcRenderer.invoke("serverpopup:try-port", Number(port)),
 });

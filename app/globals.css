@@ -1,0 +1,342 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  GLOBAL THEME VARIABLES
+  ------------------------------------------------------------------
+  - Ultra-dark premium palette (#09090b background)
+  - Electric blue / neon purple accent arc for the shimmering border
+*/
+:root {
+  --background: #09090b;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-strong: rgba(255, 255, 255, 0.07);
+  --text-primary: #fafafa; /* zinc-50 */
+  --text-muted: #a1a1aa; /* zinc-400 */
+  --accent-blue: #38bdf8;
+  --accent-purple: #a855f7;
+  --radius-card: 8px;
+
+  /* Animated angle used by the @property-based shimmer border (see below) */
+  --shimmer-angle: 0deg;
+}
+
+/*
+  @property === animated custom property
+  This is what lets us rotate `--angle` continuously on a conic-gradient
+  border without repainting the whole element. Unsupported browsers fall
+  back to the transform-based `.shimmer-card` (masked oversized rotation).
+*/
+@property --shimmer-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  /* ------------------------------------------------------------------
+     GLOBAL SCROLLBAR HIDING
+     Scroll remains fully functional; bars become completely invisible.
+     ------------------------------------------------------------------ */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE / legacy Edge */
+  }
+  *::-webkit-scrollbar {
+    display: none; /* Chrome / Safari */
+    width: 0;
+    height: 0;
+  }
+  html {
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar {
+    display: none;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--text-primary);
+    font-family: var(--font-geist-sans), Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: rgba(56, 189, 248, 0.3);
+    color: #fff;
+  }
+
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@layer components {
+  /* ------------------------------------------------------------------
+     SHIMMER CARD — the signature component (consumed by <ShimmerCard />)
+     Rounded 8px, transparent/glass, animated shimmering outline.
+
+     Markup contract:
+       <div class="shimmer-card">
+         <div class="shimmer-card__inner">…content…</div>
+       </div>
+     ------------------------------------------------------------------ */
+  .shimmer-card {
+    position: relative;
+    isolation: isolate;
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    background: #0b0c0e;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  }
+
+  /* The spinning conic arc — oversized so rotation is seamless. */
+  .shimmer-card::before {
+    content: "";
+    position: absolute;
+    inset: -200%;
+    z-index: -2;
+    background: conic-gradient(
+      from var(--shimmer-angle) at 50% 50%,
+      transparent 0deg,
+      transparent 120deg,
+      var(--accent-blue) 150deg,
+      var(--accent-purple) 195deg,
+      transparent 230deg,
+      transparent 360deg
+    );
+    animation: shimmer-rotate 7s linear infinite;
+  }
+
+  /* Opaque surface inset by 1px: hides the spinning arc everywhere except a
+     thin 1px ring around the perimeter — so ONLY the border shimmers, the
+     card interior stays clean and solid. */
+  .shimmer-card::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    border-radius: calc(var(--radius-card) - 1px);
+    background: #0b0c0e;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .shimmer-card__inner {
+    position: relative;
+    z-index: 1;
+    padding: 1.25rem;
+    background: transparent;
+  }
+
+  /* Variant: a touch lighter surface for dense data panels (still opaque) */
+  .shimmer-card--glass .shimmer-card__inner {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  /* Variant: electric-blue → white shimmer arc (avatars, media frames) */
+  .shimmer-card--white::before {
+    background: conic-gradient(
+      from var(--shimmer-angle) at 50% 50%,
+      transparent 0deg,
+      transparent 120deg,
+      var(--accent-blue) 150deg,
+      #e0f2fe 195deg,
+      transparent 230deg,
+      transparent 360deg
+    );
+  }
+
+  /* ------------------------------------------------------------------
+     SHIMMER BUTTON — solid fill, animated blue/white border only.
+     Content (label) sits above the ring; the interior is opaque so the
+     spinning arc never shows through the button face.
+     ------------------------------------------------------------------ */
+  .shimmer-btn {
+    position: relative;
+    isolation: isolate;
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    background: #0d0f13;
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    transition: filter 0.15s ease, transform 0.1s ease;
+  }
+  .shimmer-btn::before {
+    content: "";
+    position: absolute;
+    inset: -200%;
+    z-index: -2;
+    background: conic-gradient(
+      from var(--shimmer-angle) at 50% 50%,
+      transparent 0deg,
+      transparent 120deg,
+      var(--accent-blue) 150deg,
+      #e0f2fe 195deg,
+      transparent 230deg,
+      transparent 360deg
+    );
+    animation: shimmer-rotate 4s linear infinite;
+  }
+  .shimmer-btn::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    border-radius: calc(var(--radius-card) - 1px);
+    background: #0d0f13;
+  }
+  .shimmer-btn:hover {
+    filter: brightness(1.2);
+  }
+  .shimmer-btn:active {
+    transform: scale(0.98);
+  }
+
+  /* ------------------------------------------------------------------
+     CS2RATING — cstracker.gg-style Premier rating badge.
+     Slanted parallelogram with the tier's background strip + color.
+     Background strips are hotlinked from cstracker.gg (same as the map
+     screenshots) so the badges look pixel-identical to the reference.
+     The numbers are pushed right of the striped edge (margin-left on the
+     text) so the digits never touch the dashes at any size.
+     ------------------------------------------------------------------ */
+  .cs2rating {
+    align-items: center;
+    background-repeat: no-repeat;
+    background-position: 50%;
+    background-size: contain;
+    display: inline-flex;
+    font-weight: 700;
+    justify-content: center;
+    padding: 0.15rem 0.6rem 0.15rem 0.85rem;
+    text-shadow: 0 1px 0 #000;
+    min-width: 56px;
+    min-height: 26px;
+    line-height: 1.5;
+    font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .cs2rating > span {
+    transform: skew(-10deg);
+    display: inline-block;
+    white-space: nowrap;
+    /* Clearance past the bitmap's striped left edge. The skew leans the digits'
+       bottom-left ~1-2px, so 6px margin lands as a clean, tight ~4px visual gap. */
+    margin-left: 6px;
+  }
+  /* Compact (table cells): numbers keep real padding so they never touch the
+     edges — the badge grows with its content (min-width floors short values). */
+  .cs2rating--compact {
+    min-width: 48px;
+    min-height: 0;
+    padding: 0.05rem 0.5rem 0.05rem 0.65rem;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  .cs2rating.common {
+    color: #b1c3d9;
+    background-image: url("https://cstracker.gg/static/rating_bg/common.webp");
+  }
+  .cs2rating.uncommon {
+    color: #5e98d7;
+    background-image: url("https://cstracker.gg/static/rating_bg/uncommon.webp");
+  }
+  .cs2rating.rare {
+    color: #4b69ff;
+    background-image: url("https://cstracker.gg/static/rating_bg/rare.webp");
+  }
+  .cs2rating.mythical {
+    color: #8846ff;
+    background-image: url("https://cstracker.gg/static/rating_bg/mythical.webp");
+  }
+  .cs2rating.legendary {
+    color: #d22ce6;
+    background-image: url("https://cstracker.gg/static/rating_bg/legendary.webp");
+  }
+  .cs2rating.ancient {
+    color: #eb4b4b;
+    background-image: url("https://cstracker.gg/static/rating_bg/ancient.webp");
+  }
+  .cs2rating.unusual {
+    color: #fed700;
+    background-image: url("https://cstracker.gg/static/rating_bg/unusual.webp");
+  }
+
+  /* Subtle blueprint grid (match report backdrop) */
+  .tactical-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+
+  /* Variant: subtle glow leeching off the rotating arc */
+  .shimmer-card--glow {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+      0 0 30px -12px rgba(56, 189, 248, 0.25);
+  }
+
+  /* ------------------------------------------------------------------
+     STATIC accent-border card (quiet alternative; no animation)
+     ------------------------------------------------------------------ */
+  .border-card {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+
+  .text-gradient {
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* ------------------------------------------------------------------
+   KEYFRAMES
+   Purely transform-based so it animates on every modern browser.
+   ------------------------------------------------------------------ */
+@keyframes shimmer-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer-rotate-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+/* Respect users who prefer reduced motion: no shimmer slide. */
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-card::before,
+  .shimmer-card::after {
+    animation: none;
+  }
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

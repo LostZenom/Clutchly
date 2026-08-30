@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
+    />
+    <title>Clutchly — Update</title>
+    <style>
+      :root {
+        --bg: #101114;
+        --line: rgba(255, 255, 255, 0.1);
+        --muted: #9ca3af;
+        --accent: #4cc2ff;
+        --accent-2: #2f9bd8;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      }
+      body {
+        background: transparent;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      .card {
+        width: 420px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: rgba(16, 17, 20, 0.98);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+        padding: 20px 22px 16px;
+      }
+      .drag {
+        -webkit-app-region: drag;
+      }
+      .head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      }
+      .brand b {
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        color: #fafafa;
+      }
+      .close {
+        border: 1px solid var(--line);
+        background: transparent;
+        color: #71717a;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        line-height: 1;
+        -webkit-app-region: no-drag;
+      }
+      .close:hover {
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.25);
+      }
+      .title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #f4f4f5;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pill {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        background: rgba(76, 194, 255, 0.12);
+        border: 1px solid rgba(76, 194, 255, 0.25);
+        border-radius: 99px;
+        padding: 2px 8px;
+      }
+      .status {
+        margin: 6px 0 16px;
+        font-size: 12px;
+        color: var(--muted);
+        min-height: 16px;
+      }
+      .bar {
+        height: 7px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+      .fill {
+        height: 100%;
+        width: 0%;
+        border-radius: 99px;
+        background: linear-gradient(90deg, var(--accent-2), var(--accent));
+        transition: width 0.2s ease;
+      }
+      .meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 11px;
+        color: #71717a;
+        font-variant-numeric: tabular-nums;
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      button.action {
+        -webkit-app-region: no-drag;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: #d4d4d8;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 7px 14px;
+        cursor: pointer;
+      }
+      button.action:hover {
+        border-color: rgba(255, 255, 255, 0.25);
+        color: #fff;
+      }
+      button.primary {
+        border-color: transparent;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #07151f;
+        font-weight: 600;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card drag">
+      <div class="head">
+        <div class="brand">
+          <span class="dot"></span>
+          <b>Clutchly</b>
+        </div>
+        <button class="close" id="close" aria-label="Close">✕</button>
+      </div>
+
+      <div class="title">Update available <span class="pill" id="pill">new</span></div>
+      <div class="status" id="status">Checking for updates…</div>
+
+      <div class="bar"><div class="fill" id="fill"></div></div>
+
+      <div class="meta">
+        <span id="left">Preparing…</span>
+        <span id="right"></span>
+      </div>
+
+      <div class="actions">
+        <button class="action hidden" id="cancel">Later</button>
+        <button class="action primary hidden" id="install">Restart now</button>
+        <button class="action hidden" id="retry">Check again</button>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const $ = (id) => document.getElementById(id);
+        const fill = $("fill");
+        const status = $("status");
+        const left = $("left");
+        const right = $("right");
+        const installBtn = $("install");
+        const cancelBtn = $("cancel");
+        const retryBtn = $("retry");
+        const pill = $("pill");
+
+        function hideAllButtons() {
+          installBtn.classList.add("hidden");
+          cancelBtn.classList.add("hidden");
+          retryBtn.classList.add("hidden");
+        }
+
+        function render(s) {
+          if (s.status === "checking") {
+            hideAllButtons();
+            pill.textContent = "checking";
+            status.textContent = "Checking for updates…";
+            left.textContent = "Clutchly looks for the latest build";
+            right.textContent = "";
+            fill.style.width = "0%";
+          } else if (s.status === "available") {
+            hideAllButtons();
+            cancelBtn.classList.remove("hidden");
+            pill.textContent = "v" + (s.version || "new");
+            status.textContent = "A newer version is downloading — it installs itself automatically.";
+            left.textContent = "Downloading…";
+            right.textContent = "";
+          } else if (s.status === "downloading") {
+            hideAllButtons();
+            cancelBtn.classList.remove("hidden");
+            const pct = s.percent || 0;
+            fill.style.width = pct + "%";
+            status.textContent = "Downloading update…";
+            left.textContent = pct + "%";
+            if (s.total) {
+              const mb = (b) => (b / 1048576).toFixed(1) + " MB";
+              right.textContent = mb(s.transferred || 0) + " / " + mb(s.total);
+            } else {
+              right.textContent = "";
+            }
+          } else if (s.status === "downloaded") {
+            hideAllButtons();
+            installBtn.classList.remove("hidden");
+            pill.textContent = "ready";
+            status.textContent = "Everything is downloaded and ready.";
+            left.textContent = "100%";
+            right.textContent = "Tap Restart to finish";
+            fill.style.width = "100%";
+          } else if (s.status === "none") {
+            hideAllButtons();
+            status.textContent = "You're on the latest version.";
+            left.textContent = "Clutchly is up to date";
+          } else if (s.status === "error") {
+            hideAllButtons();
+            retryBtn.classList.remove("hidden");
+            status.textContent = "Could not check for updates.";
+            left.textContent = s.message || "Something went wrong";
+            right.textContent = "";
+          }
+        }
+
+        if (window.updater) {
+          window.updater.onState(render);
+          $("close").addEventListener("click", () => window.updater.close());
+          $("cancel").addEventListener("click", () => window.updater.close());
+          $("install").addEventListener("click", () => window.updater.install());
+        }
+      })();
+    </script>
+  </body>
+</html>

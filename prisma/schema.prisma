@@ -1,0 +1,365 @@
+// ==========================================================================
+// FreeBuff CS2 — Prisma Schema
+// PostgreSQL datasource. Run `pnpm db:generate` after any change to this file.
+// ==========================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------------------------------------
+// ENUMS
+// --------------------------------------------------------------------------
+
+/// Parsing state of a downloaded .dem file.
+enum ParseStatus {
+  QUEUED
+  DOWNLOADING
+  DOWNLOADED
+  PARSING
+  PARSED
+  FAILED
+}
+
+/// Team identifiers as used by the game's DTO (2 = Counter-Terrorist, 3 = Terrorist).
+enum TeamSide {
+  CT
+  T
+  SPECTATOR
+}
+
+/// Why a round ended — used by the match timeline.
+enum RoundEndReason {
+  TARGET_BOMBED
+  VIP_ESCAPED
+  VIP_KILLED
+  TERRORISTS_ESCAPED
+  CT_STOPPED_ESCALATION
+  TERRORISTS_SAFE
+  CT_REACHED_DEFUSE
+  CT_WIN
+  TERRORISTS_WIN
+  TERRORISTS_UNREACHED
+  INFECTION_OVER
+  BOMB_DEFUSED
+  ROUND_END
+}
+
+/// Support-side the economy snapshot was recorded for.
+enum EconomySide {
+  CT
+  T
+}
+
+// --------------------------------------------------------------------------
+// USER
+// A statically-resolvable player. steam64 is the natural primary key, so we
+// deliberately do NOT use a generated cuid here — every sync leans on it.
+// --------------------------------------------------------------------------
+model User {
+  steam64     String    @id // "76561198..."
+  steam3      String? // "[U:1:...]"
+  username    String
+  avatarUrl   String?
+  avatarHash  String? // Steam returns a hash; URL can be derived from it
+  profileUrl  String?
+  country     String?
+  isVACBanned Boolean   @default(false)
+  faceitElo   Int? // nullable until a Faceit link/profile is provided
+  faceitLevel Int?
+  faceitId     String? // Faceit account id (linked via the Faceit Data API)
+  faceitUsername String?
+  lastSeenAt  DateTime?
+  matchAuthCode String? // CS2 Match History Authentication Code (opt-in sharing)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  playerMatchStats PlayerMatchStat[]
+  chats            ChatLog[]
+  weaponStats      WeaponMatchStat[]
+
+  // Teammate links where this user is the "primary" reference player
+  teammateLinks          TeammateLink[] @relation("TeammatePrimary")
+  teammateLinksAsPartner TeammateLink[] @relation("TeammatePartner")
+
+  @@index([username])
+  @@index([faceitLevel])
+}
+
+// --------------------------------------------------------------------------
+// MATCH
+// One parsed .dem match. Stores the scoreboard provenance plus the share code
+// and demo download bookkeeping consumed by the BullMQ pipeline.
+// --------------------------------------------------------------------------
+model Match {
+  id           String      @id @default(cuid())
+  shareCode    String      @unique // "CSGO-xxxx-yyyy-zzzz"
+  demoUrl      String? // HTTPS URL used to download the .dem
+  demoFileName String? // local filename under /demos
+  demoFilePath String? // absolute path once downloaded
+  demoFileSize Int? // bytes
+
+  mapName      String // e.g. "de_mirage"
+  tickRate     Int?
+  durationSecs Int? // approximate match duration
+  totalRounds  Int @default(0)
+  scoreCT      Int @default(0)
+  scoreT       Int @default(0)
+  winningTeam  TeamSide? // NULL = tie
+  matchOutcome String? // convenience: "WIN" | "LOSS" | "TIE" relative to a reference player
+  matchDate    DateTime @default(now()) // when the match was played
+  serverIp     String? // authoritative server IP the match ran on
+
+  startedAtParsed DateTime?
+  parsedAt        DateTime?
+  parseStatus     ParseStatus @default(QUEUED)
+  parseError      String?
+  retryCount      Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  server          ServerLocation?  @relation(fields: [serverIp], references: [serverIp])
+  playerStats     PlayerMatchStat[]
+  chatLogs        ChatLog[]
+  rounds          RoundEvent[]
+  weaponStats     WeaponMatchStat[]
+
+  @@index([mapName, matchDate])
+  @@index([matchDate])
+  @@index([parseStatus])
+  @@index([serverIp])
+}
+
+// --------------------------------------------------------------------------
+// PLAYER MATCH STAT
+// Per-player, per-match scoreboard row (5 CT + 5 T per match).
+// --------------------------------------------------------------------------
+model PlayerMatchStat {
+  id       String   @id @default(cuid())
+  matchId  String
+  userSteam64 String
+
+  steam64  String // denormalized for fast warm lookups without relation
+  username String
+  team     TeamSide
+
+  // Core scoreboard
+  kills        Int @default(0)
+  deaths       Int @default(0)
+  assists      Int @default(0)
+  kdRatio      Float @default(0)
+  mvp          Int @default(0)
+  headshots    Int @default(0)
+  hsPercent    Float @default(0) // 0 - 100
+  kast         Float @default(0) // percentage
+  adr          Float @default(0) // average damage per round
+  hltvRating   Float @default(0) // HLTV Rating 2.0
+  score        Int @default(0)
+
+  // Utility & economy
+  bombPlants   Int @default(0)
+  bombDefuses  Int @default(0)
+  firstKillCount Int @default(0)
+  firstDeathCount Int @default(0)
+  utilityDamage Int @default(0)
+  k1           Int @default(0) // 1k rounds
+  k2           Int @default(0)
+  k3           Int @default(0) // triple kill
+  k4           Int @default(0)
+  k5           Int @default(0) // ace
+  totalSaved   Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userSteam64], references: [steam64], onDelete: Cascade)
+
+  @@unique([matchId, userSteam64]) // one row per player per match
+  @@index([userSteam64])
+  @@index([matchId])
+  @@index([hltvRating])
+}
+
+// --------------------------------------------------------------------------
+// CHAT LOG
+// Every chat message a player sent, tagged with the round in which it was typed.
+// --------------------------------------------------------------------------
+model ChatLog {
+  id       String @id @default(cuid())
+  matchId  String
+  userSteam64 String
+
+  username String // display name used at the moment of the message (premium UX)
+  message  String @db.Text
+  isTeamChat Boolean @default(false) // false = all chat
+  round    Int // 0-based round index from the parser
+  tick     Int // in-game tick so we can re-plot against the timeline
+  msAgo    Int? // optional: ms relative to round start for timeline anchoring
+  sentAt   DateTime // UTC timestamp approximated from demo metadata
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userSteam64], references: [steam64], onDelete: Cascade)
+
+  @@index([userSteam64, isTeamChat])
+  @@index([userSteam64, sentAt])
+  @@index([matchId, round])
+  @@index([round])
+}
+
+// --------------------------------------------------------------------------
+// WEAPON MATCH STAT
+// Per-player, per-match kills by weapon (from demo death events).
+// --------------------------------------------------------------------------
+model WeaponMatchStat {
+  id          String @id @default(cuid())
+  matchId     String
+  userSteam64 String
+  weapon      String // demoparser weapon name, e.g. "ak47" (matches our SVG keys)
+  kills       Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userSteam64], references: [steam64], onDelete: Cascade)
+
+  @@unique([matchId, userSteam64, weapon])
+  @@index([userSteam64])
+  @@index([matchId])
+}
+
+// --------------------------------------------------------------------------
+// TEAMMATE LINK
+// Aggregated duo relationship. One row per (primarySteam64, partnerSteam64).
+// Win rate is derived, but stored so the leaderboard query is O(1).
+// --------------------------------------------------------------------------
+model TeammateLink {
+  id             String @id @default(cuid())
+  primarySteam64 String // the user whose profile we're viewing
+  partnerSteam64 String // the other player they queued with
+  partnerUsername String?
+
+  matchesPlayed Int @default(0)
+  wins          Int @default(0)
+  losses        Int @default(0)
+  ties          Int @default(0)
+  winRate       Float @default(0) // 0 - 100
+  avgKd         Float @default(0)
+  avgRating     Float @default(0)
+  lastPlayedAt  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  primaryUser User @relation("TeammatePrimary", fields: [primarySteam64], references: [steam64], onDelete: Cascade)
+  partnerUser User @relation("TeammatePartner", fields: [partnerSteam64], references: [steam64], onDelete: Cascade)
+
+  @@unique([primarySteam64, partnerSteam64])
+  @@index([primarySteam64, matchesPlayed]) // "most queued" leaderboard
+  @@index([primarySteam64, winRate])
+}
+
+// --------------------------------------------------------------------------
+// STAT CACHE
+// Aggressive response cache for aggregated player stats. Every provider
+// (Steam API, GC, local replays, scraper adapters) writes here so a profile is
+// re-fetched at most once per TTL, not on every page load.
+// --------------------------------------------------------------------------
+model StatCache {
+  key       String   @id
+  source    String // "steam" | "gc" | "replays" | "scrape:<site>" | "merged"
+  payload   Json
+  fetchedAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([source, expiresAt])
+}
+
+// --------------------------------------------------------------------------
+// SERVER LOCATION
+// Geo enrichment of a match server IP. The IP is the natural key.
+// --------------------------------------------------------------------------
+model ServerLocation {
+  serverIp   String @id // "185.227.68.xxx"
+  city       String?
+  region     String?
+  country    String? // ISO code, e.g. "DE"
+  countryName String?
+  latitude   Float?
+  longitude  Float?
+  timezone   String?
+  isp        String?
+  provider   String? // VALVE <region> inferred bucket
+  regionCode String? // e.g. "eu-west"
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  // Relations
+  matches Match[]
+
+  @@index([country])
+  @@index([latitude, longitude])
+}
+
+// --------------------------------------------------------------------------
+// ROUND EVENT (SUPPORTING MODEL)
+// One row per round per match. Powers the round-by-round timeline AND the
+// per-round team economy snapshot used on the Match Detail page (Step 6).
+// --------------------------------------------------------------------------
+model RoundEvent {
+  id        String   @id @default(cuid())
+  matchId   String
+  round     Int // 0-based
+  winner    TeamSide
+  endReason RoundEndReason?
+
+  bombPlanted Boolean @default(false)
+  bombSite    String? // A/B
+  playersCtAlive Int @default(0)
+  playersTAlive  Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  // One EconomySnapshot per side, distinguishable via `side` on the child.
+  economies EconomySnapshot[]
+  match     Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, round])
+  @@index([matchId])
+}
+
+// Per-round, per-team economy snapshot. Powers the economy timeline and the
+// "who can afford rifles" inference on the Match Detail page (Step 6).
+model EconomySnapshot {
+  id           String      @id @default(cuid())
+  roundEventId String
+  side         EconomySide // CT or T
+
+  teamMoney    Int @default(0) // combined team cash
+  bankSum      Int @default(0) // sum of all players' current banks
+  lowestBank   Int @default(0)
+  highestBank  Int @default(0)
+  averageBank  Int @default(0)
+  rifles       Int @default(0)
+  smgs         Int @default(0)
+  pistolsBonus Int @default(0)
+  grenades     Int @default(0)
+  defuseKits   Int @default(0)
+
+  roundEvent RoundEvent @relation(fields: [roundEventId], references: [id], onDelete: Cascade)
+
+  @@unique([roundEventId, side]) // one row per side per round
+  @@index([side])
+}

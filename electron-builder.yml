@@ -1,0 +1,56 @@
+# electron-builder config for the Clutchly desktop overlay.
+# The overlay app boots its own website (a Next.js standalone build) on a local
+# port, so the packaged app ships that site UNPACKED under <resources>/site. The
+# thin Electron shell (main/preload/tray/updater) stays packed in the asar.
+#
+# Auto-update: publish to GitHub Releases (electron-builder resolves owner/repo
+# from the git remote when present). Release with `npm run release`.
+
+appId: com.clutchly.overlay
+productName: Clutchly Overlay
+
+directories:
+  output: dist
+  buildResources: build
+
+# Restore the standalone site's node_modules/.next into <resources>/site after
+# packaging (electron-builder strips node_modules from extraResources by default).
+afterPack: scripts/afterPack.mjs
+
+# Thin Electron shell + tray icon + the auto-updater (and its dependency tree).
+# node_modules stays out except what the shell actually needs.
+files:
+  - "electron/**"
+  - "public/clutchly-logo.png"
+  - "node_modules/electron-updater/**"
+  - "!dist/**"
+
+asar: true
+
+# The staged standalone site (produced by `npm run build` →
+# `scripts/package-site.mjs`) is copied UNPACKED so the booted server can read it.
+extraResources:
+  - from: ".next/standalone"
+    to: "site"
+
+# Publish/update-feed config lives in `scripts/release.mjs` (it injects
+# owner/repo from GH_REPO at release time). Local `dist:overlay` builds skip
+# publishing, since a release feed needs a real repo.
+#
+# Tray/install icon, derived from the 256x256 logo.
+icon: public/clutchly-logo.png
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  # Windows needs an .ico; electron-builder converts our PNG automatically.
+  icon: public/clutchly-logo.png
+
+nsis:
+  oneClick: true
+  perMachine: false
+  allowToChangeInstallationDirectory: false
+  artifactName: ${productName}-Setup-${version}.${ext}
+  shortcutName: Clutchly Overlay

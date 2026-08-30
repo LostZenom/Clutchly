@@ -75,7 +75,8 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 16px 20px 14px;
+        /* bottom padding clears the pinned debug console */
+        padding: 16px 24px 96px;
       }
 
       .close {
@@ -240,6 +241,50 @@
         border-color: rgba(255, 255, 255, 0.3);
         color: #fff;
       }
+
+      /* Bottom "what it's doing now" log console */
+      .debug {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        height: 74px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.045);
+        border: 1px solid rgba(255, 255, 255, 0.055);
+        padding: 6px 9px 6px 8px;
+        overflow-y: auto;
+        text-align: left;
+      }
+      .debug::-webkit-scrollbar {
+        width: 0;
+      }
+      .debug .lbl {
+        display: block;
+        font-size: 7.5px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.28);
+        margin-bottom: 3px;
+      }
+      .debug .ln {
+        font: 9px/1.5 ui-monospace, "Cascadia Mono", "Consolas", monospace;
+        color: #8f99a6;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .debug .ln .t {
+        color: rgba(255, 255, 255, 0.22);
+      }
+      .debug .ln.audio,
+      .debug .ln.audio .t {
+        color: rgba(125, 211, 252, 0.55);
+      }
+      .debug .ln.warn,
+      .debug .ln.warn .t {
+        color: rgba(250, 204, 21, 0.6);
+      }
       .hidden {
         display: none !important;
       }
@@ -274,6 +319,11 @@
           <a class="url hidden" id="url" href="#"><span id="urltext"></span><span class="go">↗</span></a>
           <div class="errbox hidden" id="errbox"></div>
           <button class="closebtn hidden" id="closebtn">Close</button>
+        </div>
+
+        <div class="debug" id="debug">
+          <span class="lbl">Server activity</span>
+          <div id="loglines"></div>
         </div>
       </div>
     </div>
@@ -346,14 +396,68 @@
           window.serverPopup ? window.serverPopup.close() : null
         );
 
+        // ---- bottom debug console --------------------------------------
+        const loglines = $("loglines");
+        const lastLine = {};
+        const audioRe = /ready|listening|compiled|ready in|started server/i;
+        const warnRe = /warn|error|fail|refused|shutdown|closed leftover/i;
+
+        function stamp() {
+          const d = new Date();
+          return String(d.getHours()).padStart(2, "0") + ":" +
+            String(d.getMinutes()).padStart(2, "0") + ":" +
+            String(d.getSeconds()).padStart(2, "0");
+        }
+
+        function addLog(raw) {
+          const line = String(raw || "").replace(/^\[site\]\s*/i, "");
+          if (!line) return;
+          // Collapse rapid repeats of the same line (e.g. boot polling).
+          if (line === lastLine.text) {
+            lastLine.count++;
+            lastLine.el.textContent = `${line} ×${lastLine.count}`;
+            return;
+          }
+          lastLine.text = line;
+          lastLine.count = 1;
+          const el = document.createElement("div");
+          el.className = "ln";
+          const t = document.createElement("span");
+          t.className = "t";
+          t.textContent = `${stamp()}  `;
+          el.appendChild(t);
+          el.appendChild(document.createTextNode(line));
+          if (audioRe.test(line)) el.classList.add("audio");
+          else if (warnRe.test(line)) el.classList.add("warn");
+          lastLine.el = el;
+          loglines.appendChild(el);
+          while (loglines.childElementCount > 40) loglines.firstChild.remove();
+          loglines.scrollTop = loglines.scrollHeight;
+        }
+
         if (window.serverPopup) {
+          window.serverPopup.onLog((d) => addLog(d && d.line));
+          window.serverPopup.getLogs().then((lines) => {
+            (lines || []).forEach(addLog);
+          });
           window.serverPopup.onState(setState);
         } else {
           // Preview mode: demo the states via the URL hash (#ok / #error).
           const h = location.hash;
-          if (h === "#ok") setState({ status: "ok", url: "http://127.0.0.1:3100/" });
-          else if (h === "#error") setState({ status: "error", port: 3100, message: "The website could not start on port 3100. It may already be in use by another app — try a different port in Settings." });
-          else setState({ status: "starting", port: 3100 });
+          addLog("checking port 3100…");
+          addLog("no leftover localhost server on 127.0.0.1:3100");
+          if (h === "#ok") {
+            setState({ status: "ok", url: "http://127.0.0.1:3100/" });
+            addLog("starting site (standalone) on 127.0.0.1:3100…");
+            addLog("site ready at http://127.0.0.1:3100");
+          } else if (h === "#error") {
+            setState({ status: "error", port: 3100, message: "The website could not start on port 3100. It may already be in use by another app — try a different port in Settings." });
+            addLog("starting site (standalone) on 127.0.0.1:3100…");
+            addLog("port 3100 refused to bind — it may already be in use");
+          } else {
+            setState({ status: "starting", port: 3100 });
+            addLog("starting site (standalone) on 127.0.0.1:3100…");
+          }
         }
       })();
     </script>

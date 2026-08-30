@@ -132,34 +132,51 @@ function createServerManager({ projectRoot, onLog }) {
 
   async function waitUntilReady(port, timeoutMs = 90_000) {
     const start = Date.now();
+    let lastBeat = 0;
     while (Date.now() - start < timeoutMs) {
       if (await probe(port)) return true;
       // If the child died, don't wait the full timeout.
       if (!child) return false;
+      // Quiet heartbeat every ~3s so the debug console shows the boot is alive.
+      if (Date.now() - lastBeat > 3000) {
+        lastBeat = Date.now();
+        log(`waiting for the site on port ${port} to come up…`);
+      }
       await new Promise((r) => setTimeout(r, 400));
     }
     return false;
   }
 
   /**
-   * Ensure the site is reachable at the given port. Reuses an already-running
-   * instance if present; otherwise boots one and waits for it to serve.
+   * Ensure the site is reachable at the given port.
+   *
+   * The port is first made truly free: any leftover/foreign localhost listener
+   * on it (e.g. an orphaned server from a previous crash, or an unrelated app
+   * that grabbed the port) is closed before we boot, so the site can bind cleanly
+   * and fully automatically. An already-running server that we own (this session)
+   * is simply reused.
    * @returns {Promise<string>} the base URL (http://127.0.0.1:<port>)
    */
   async function ensureServer(port) {
     port = normalizePort(port);
-    currentPort = port;
-    if (await isAlive(port)) {
+    // If this is still our own server from an earlier boot in this session and it
+    // is healthy, reuse it instead of tearing it down and starting again.
+    if (child && child.pid != null && (await isAlive(port))) {
+      currentPort = port;
       log(`site already running on ${HOST}:${port} — reusing it.`);
       return baseUrl(port);
     }
+    // Close every residual localhost server on this port so we start clean.
+    await freePort(port, child && child.pid);
     spawnNext(port);
     const ready = await waitUntilReady(port);
     if (!ready) {
       err(`site did not become ready on ${port}.`);
       stopServer();
+      currentPort = null;
       throw new Error(`The website could not start on port ${port}. It may already be in use by another app — try a different port in Settings.`);
     }
+    currentPort = port;
     log(`site ready at ${baseUrl(port)}`);
     return baseUrl(port);
   }
@@ -212,6 +229,64 @@ function normalizePort(input) {
   const n = typeof input === "string" ? parseInt(input, 10) : Number(input);
   if (Number.isInteger(n) && n >= 1 && n <= 65535) return n;
   return 3100;
+}
+
+/**
+ * Best-effort: find every localhost process listening on `port` and shut it
+ * down, so the app can bind the port cleanly on boot. Only the listening PID
+ * (or the whole of a Windows process tree) is killed — nothing else is touched.
+ * Our own current child (if any) is excluded via `excludePid`.
+ * @returns {Promise<number>} how many PIDs were closed
+ */
+async function freePort(port, excludePid) {
+  const target = `${HOST}:${port}`;
+  const pids = [];
+  const kill = (pid) => {
+    if (!Number.isInteger(pid) || pid <= 0 || pid === excludePid) return;
+    pids.push(pid);
+  };
+
+  try {
+    if (process.platform === "win32") {
+      const out = spawnSync("netstat", ["-ano", "-p", "tcp"], {
+        windowsHide: true,
+        encoding: "utf8",
+      });
+      for (const line of (out.stdout || "").split(/\r?\n/)) {
+        const cols = line.split(/\s+/).filter(Boolean);
+        if (cols[0] !== "TCP") continue;
+        if (cols[1] === target && /^LISTEN/i.test(cols[3] || "")) {
+          kill(parseInt(cols[cols.length - 1], 10));
+        }
+      }
+      for (const pid of pids) {
+        try {
+          spawnSync("taskkill", ["/pid", String(pid), "/T", "/F"], { windowsHide: true });
+          console.log(`[site] closed leftover localhost server on ${target} (PID ${pid})`);
+        } catch {
+          /* best-effort */
+        }
+      }
+    } else {
+      const out = spawnSync("lsof", ["-nP", "-iTCP:" + port, "-sTCP:LISTEN", "-t"], {
+        encoding: "utf8",
+      });
+      for (const pidStr of (out.stdout || "").split(/\s+/).filter(Boolean)) {
+        kill(parseInt(pidStr, 10));
+      }
+      for (const pid of pids) {
+        try {
+          process.kill(pid, "SIGTERM");
+          console.log(`[site] closed leftover localhost server on ${target} (PID ${pid})`);
+        } catch {
+          /* best-effort */
+        }
+      }
+    }
+  } catch {
+    /* best-effort; if we can't probe we simply attempt boot */
+  }
+  return pids.length;
 }
 
 function baseUrl(port) {

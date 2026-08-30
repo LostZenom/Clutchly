@@ -14,14 +14,21 @@ const {
 const { loadSettings, saveSettings, DEFAULTS } = require("./settings.cjs");
 const { createServerManager, normalizePort } = require("./serverManager.cjs");
 const { setupAutoUpdate } = require("./updater.cjs");
-const { showServerPopup } = require("./serverPopup.cjs");
+const { showServerPopup, broadcastLog } = require("./serverPopup.cjs");
 
 const TOGGLE_ACCEL_DEFAULT = DEFAULTS.hotkey;
 
 // The overlay app boots the website itself on a local port (see settings.serverPort)
 // and shuts it down on quit — no need to run the site separately.
 const PROJECT_ROOT = app.isPackaged ? app.getAppPath() : path.join(__dirname, "..");
-const server = createServerManager({ projectRoot: PROJECT_ROOT });
+const server = createServerManager({
+  projectRoot: PROJECT_ROOT,
+  // Pipe each boot/log line into the popup's bottom debug console as it happens.
+  onLog: (line) => {
+    console.log(`[site] ${line}`);
+    broadcastLog(line);
+  },
+});
 const updater = setupAutoUpdate();
 
 // Keep Electron's disk cache off OneDrive/odd profile dirs on a per-machine path.

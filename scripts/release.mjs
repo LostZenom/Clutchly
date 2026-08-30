@@ -76,4 +76,41 @@ await build({
   },
 });
 
+// electron-builder leaves GitHub releases as drafts — publish them (and drop
+// any duplicate drafts it raced into existence) so the update feed is public.
+if (!dryRun) {
+  const tag = `v${version}`;
+  const authHeaders = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/vnd.github+json",
+  };
+  try {
+    const listRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repoName}/releases?per_page=10`,
+      { headers: authHeaders },
+    );
+    const list = (await listRes.json()) || [];
+    const drafts = (Array.isArray(list) ? list : []).filter((r) => r.tag_name === tag && r.draft);
+    const keeper = drafts.find((r) => (r.assets || []).some((a) => a.name === "latest.yml")) || drafts[0];
+    for (const r of drafts) {
+      if (r.id === keeper?.id) {
+        await fetch(`https://api.github.com/repos/${owner}/${repoName}/releases/${r.id}`, {
+          method: "PATCH",
+          headers: { ...authHeaders, "Content-Type": "application/json" },
+          body: JSON.stringify({ draft: false }),
+        });
+        console.log(`[release] published release ${tag}`);
+      } else {
+        await fetch(`https://api.github.com/repos/${owner}/${repoName}/releases/${r.id}`, {
+          method: "DELETE",
+          headers: authHeaders,
+        });
+        console.log(`[release] removed duplicate draft ${r.id}`);
+      }
+    }
+  } catch (e) {
+    console.warn(`[release] could not finalize the release: ${e && e.message}`);
+  }
+}
+
 console.log(`\n[release] done — v${version} is live. Installed copies will update automatically.`);

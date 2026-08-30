@@ -14,6 +14,7 @@ const {
 const { loadSettings, saveSettings, DEFAULTS } = require("./settings.cjs");
 const { createServerManager, normalizePort } = require("./serverManager.cjs");
 const { setupAutoUpdate } = require("./updater.cjs");
+const { showServerPopup } = require("./serverPopup.cjs");
 
 const TOGGLE_ACCEL_DEFAULT = DEFAULTS.hotkey;
 
@@ -219,6 +220,7 @@ function registerIpc() {
       needsRestart = true;
       try {
         await server.restartServer(patch.serverPort);
+        showServerPopup("ok", { port: normalizePort(patch.serverPort), url: `${server.currentUrl()}/` });
         for (const w of BrowserWindow.getAllWindows()) {
           if (!w.isDestroyed()) {
             w.loadURL(w === settingsWin ? `${overlayUrl()}?settings=1` : overlayUrl()).catch(() => {});
@@ -226,6 +228,10 @@ function registerIpc() {
         }
       } catch (e) {
         console.error("[overlay] could not restart site on new port:", e && e.message);
+        showServerPopup("error", {
+          port: normalizePort(patch.serverPort),
+          message: (e && e.message) || "The website could not restart on that port.",
+        });
       }
     }
     // Keep every window (main overlay + settings) in sync instantly.
@@ -257,10 +263,17 @@ if (!gotLock) {
     // Boot the website on the configured port (best-effort). If it can't start
     // (e.g. another app owns the port), the overlay falls back to the external URL.
     const port = normalizePort((loadSettings().serverPort) ?? DEFAULTS.serverPort);
+    // The server popup is the first thing you see — it reports the boot live.
+    showServerPopup("starting", { port });
     try {
-      await server.ensureServer(port);
+      const url = await server.ensureServer(port);
+      showServerPopup("ok", { port, url: `${url}/` });
     } catch (e) {
       console.error(`[overlay] could not boot the site on ${port}:`, e && e.message);
+      showServerPopup("error", {
+        port,
+        message: (e && e.message) || "The website could not start on this port.",
+      });
     }
     createWindow();
     createTray();

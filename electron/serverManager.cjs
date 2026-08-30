@@ -30,19 +30,27 @@ const AUTO_FALLBACK_TRIES = 12; // try port, port+1, … port+11 before giving u
 const BOOT_TIMEOUT_MS = 35_000; // how long to wait per port attempt
 
 /**
- * @param {{ projectRoot: string, onLog?: (line:string)=>void, onAttempt?: (port:number)=>void }} opts
+ * @param {{ projectRoot: string, onLog?: (line:string)=>void, onAttempt?: (port:number)=>void, logFile?: string }} opts
  */
-function createServerManager({ projectRoot, onLog, onAttempt }) {
+function createServerManager({ projectRoot, onLog, onAttempt, logFile }) {
   let child = null;
   let currentPort = null;
   let stopping = false;
+  let childDead = false;
+  let lastSpawnError = null;
 
   const log = (msg) => {
+    if (logFile) {
+      try {
+        fs.appendFileSync(logFile, `[${new Date().toLocaleTimeString()}] ${msg}\n`, "utf8");
+      } catch {
+        /* ignore */
+      }
+    }
     if (onLog) onLog(msg);
     else console.log(`[site] ${msg}`);
   };
   const err = (msg) => console.error(`[site] ${msg}`);
-
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   /**
@@ -70,29 +78,45 @@ function createServerManager({ projectRoot, onLog, onAttempt }) {
     return respond(port);
   }
 
-  /** Parse the project's `.env` (KEY="VALUE" / KEY=VALUE, # = comment). */
+  /**
+   * The directory the site actually runs from. Packaged apps must NOT use
+   * app.getAppPath() as cwd — that's the asar archive (a file). The site is
+   * unpacked to <resources>/site with its own .env, node_modules and .next, so
+   * that's the real working directory. Dev uses the project root.
+   */
+  function serverCwd() {
+    if (process.resourcesPath) {
+      const site = path.join(process.resourcesPath, "site");
+      if (fs.existsSync(site)) return site;
+    }
+    return projectRoot;
+  }
+
+  /** Parse `.env` (KEY="VALUE" / KEY=VALUE, # = comment) from the server cwd. */
   function loadDotEnv() {
     const out = {};
-    const file = path.join(projectRoot, ".env");
-    try {
-      if (!fs.existsSync(file)) return out;
-      for (const raw of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
-        const line = raw.trim();
-        if (!line || line.startsWith("#")) continue;
-        const eq = line.indexOf("=");
-        if (eq <= 0) continue;
-        const key = line.slice(0, eq).trim();
-        let value = line.slice(eq + 1).trim();
-        if (
-          (value.startsWith('"') && value.endsWith('"')) ||
-          (value.startsWith("'") && value.endsWith("'"))
-        ) {
-          value = value.slice(1, -1);
+    const cwd = serverCwd();
+    for (const file of [path.join(cwd, ".env"), path.join(projectRoot, ".env")]) {
+      try {
+        if (!fs.existsSync(file)) continue;
+        for (const raw of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+          const line = raw.trim();
+          if (!line || line.startsWith("#")) continue;
+          const eq = line.indexOf("=");
+          if (eq <= 0) continue;
+          const key = line.slice(0, eq).trim();
+          let value = line.slice(eq + 1).trim();
+          if (
+            (value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))
+          ) {
+            value = value.slice(1, -1);
+          }
+          if (key) out[key] = value;
         }
-        if (key) out[key] = value;
+      } catch {
+        /* ignore */
       }
-    } catch {
-      /* ignore */
     }
     return out;
   }
@@ -146,20 +170,23 @@ function createServerManager({ projectRoot, onLog, onAttempt }) {
         ? [runner.entry, "-H", HOST, "-p", String(port)]
         : [runner.entry, runner.type, "-H", HOST, "-p", String(port)];
 
-    // The site must see the project's .env (DB, Redis, Steam) to boot fully.
+    // The site must see the .env (DB, Redis, Steam) to boot fully.
+    const cwd = serverCwd();
     const env = {
       ...process.env,
       ...loadDotEnv(),
       HOSTNAME: HOST,
       PORT: String(port),
       NEXT_TELEMETRY_DISABLED: "1",
-      NEXT_RUNTIME_DIR: path.join(projectRoot, ".next"),
+      NEXT_RUNTIME_DIR: path.join(cwd, ".next"),
     };
     if (node.electron) env.ELECTRON_RUN_AS_NODE = "1";
 
+    childDead = false;
+    lastSpawnError = null;
     log(`starting site (${runner.type}) on ${HOST}:${port}…`);
     child = spawn(node.exe, args, {
-      cwd: projectRoot,
+      cwd,
       env,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
@@ -186,10 +213,15 @@ function createServerManager({ projectRoot, onLog, onAttempt }) {
     pipe(child.stdout);
     pipe(child.stderr);
 
-    child.on("error", (e) => err(`could not start server: ${e && e.message}`));
+    child.on("error", (e) => {
+      lastSpawnError = e && e.message ? e.message : String(e);
+      childDead = true;
+      err(`could not start server: ${lastSpawnError}`);
+    });
     child.on("exit", (code, signal) => {
       if (!stopping) err(`site exited unexpectedly (code=${code}, signal=${signal}).`);
       child = null;
+      childDead = true;
     });
     return child;
   }
@@ -199,7 +231,8 @@ function createServerManager({ projectRoot, onLog, onAttempt }) {
     let lastBeat = 0;
     while (Date.now() - start < timeoutMs) {
       if (await respond(port)) return true;
-      if (!child) return false; // process died — don't wait the full timeout
+      // Process died or failed to spawn — don't sit out the full timeout.
+      if (childDead || !child) return false;
       if (Date.now() - lastBeat > 3000) {
         lastBeat = Date.now();
         log(`waiting for the site on port ${port} to come up…`);
@@ -246,9 +279,10 @@ function createServerManager({ projectRoot, onLog, onAttempt }) {
     }
 
     currentPort = null;
-    throw new Error(
-      `The server could not start on ports ${tried.join(", ")}. They may be in use or the site failed to boot — try a different port.`,
-    );
+    const detail = lastSpawnError
+      ? ` The server process could not be started (${lastSpawnError}).`
+      : " They may be in use or the site failed to boot — try a different port.";
+    throw new Error(`The server could not start on ports ${tried.join(", ")}.${detail}`);
   }
 
   /** Restart the site on a new port (used on port change / retry). */

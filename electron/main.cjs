@@ -23,6 +23,9 @@ const TOGGLE_ACCEL_DEFAULT = DEFAULTS.hotkey;
 const PROJECT_ROOT = app.isPackaged ? app.getAppPath() : path.join(__dirname, "..");
 const server = createServerManager({
   projectRoot: PROJECT_ROOT,
+  // Mirror every boot line to a log file too, so a failure can always be
+  // inspected even if the popup misses it.
+  logFile: path.join(os.tmpdir(), "clutchly-overlay", "server.log"),
   // Pipe each boot/log line into the popup's bottom debug console as it happens.
   onLog: (line) => {
     console.log(`[site] ${line}`);

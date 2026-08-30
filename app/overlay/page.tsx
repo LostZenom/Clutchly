@@ -52,6 +52,23 @@ interface OverlayApi {
 
 const POLL_MS = 6000;
 
+/**
+ * Fetch + parse a JSON API response. Throws on network failures and on
+ * non-JSON responses (e.g. Next's HTML 500 page), so the UI never shows the
+ * misleading "could not reach the app server" when the server is actually up
+ * but its API is broken/stale.
+ */
+async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<any> {
+  const res = await fetch(input, init);
+  const ct = res.headers.get("content-type") || "";
+  if (!ct.includes("json")) {
+    throw new Error(
+      `The site's API answered with HTTP ${res.status} instead of JSON — the local server may be stale. Restart the app to reboot it.`,
+    );
+  }
+  return res.json();
+}
+
 const chevronLeft = (
   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path
@@ -830,13 +847,15 @@ function SettingsModal({
   const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const qrStartedRef = useRef(false);
   const qrIdRef = useRef<string | null>(null);
+  // One silent Steam-client auto-login attempt per app launch, so a logged-in
+  // Steam session syncs to the app instantly without any clicks.
+  const autoSyncRef = useRef(false);
 
   const startQr = useCallback(async (silent = false) => {
     if (!silent) setQrLoading(true);
     setQrMsg(null);
     try {
-      const res = await fetch("/api/overlay/login-qr", { method: "POST" });
-      const data = await res.json();
+      const data = await apiFetch("/api/overlay/login-qr", { method: "POST" });
       if (data.ok && data.id && data.qrDataUrl) {
         qrIdRef.current = data.id;
         setQrId(data.id);
@@ -844,8 +863,8 @@ function SettingsModal({
       } else {
         setQrMsg(data.message || "Could not start QR login.");
       }
-    } catch {
-      setQrMsg("Could not reach the app server (is it running?).");
+    } catch (e) {
+      setQrMsg((e as Error)?.message || "Could not reach the app server (is it running?).");
     } finally {
       setQrLoading(false);
     }
@@ -933,8 +952,15 @@ function SettingsModal({
         setGc2fa(st.gc2faCode || "");
         setGcRefresh(st.refreshToken || "");
         setTracked(st.trackedSteam64 || "");
+        // Not linked yet? If Steam is logged in on this PC, link it and start
+        // the live feed automatically — the account syncs to the app instantly.
+        if (!st.trackedSteam64 && !autoSyncRef.current) {
+          autoSyncRef.current = true;
+          void loginViaClient(true);
+        }
       })
       .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
 
   // When Steam Guard asks for a code, surface the field immediately (autofocus).
@@ -1002,7 +1028,7 @@ function SettingsModal({
     setLoginState("loading");
     setLoginMsg("");
     try {
-      const res = await fetch("/api/overlay/login", {
+      const data = await apiFetch("/api/overlay/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1014,7 +1040,6 @@ function SettingsModal({
           apiKey: apiKey.trim() || undefined,
         }),
       });
-      const data = await res.json();
       if (data.needsGuard) {
         setLoginState("guard");
         setLoginMsg(data.message || "Steam Guard code required — add it above and try again.");
@@ -1050,9 +1075,9 @@ function SettingsModal({
         setLoginState("error");
         setLoginMsg(data.message || "Could not log in to Steam.");
       }
-    } catch {
+    } catch (e) {
       setLoginState("error");
-      setLoginMsg("Could not reach the app server (is it running?).");
+      setLoginMsg((e as Error)?.message || "Could not reach the app server (is it running?).");
     }
   };
 
@@ -1068,30 +1093,49 @@ function SettingsModal({
     </button>
   );
 
-  const loginViaClient = async () => {
-    setClientState("loading");
-    setClientMsg("");
+  /**
+   * One-click auto-login via the Steam desktop client session. In silent mode
+   * (used on app launch) failures are ignored quietly, so a machine without
+   * Steam logged in just stays on the QR screen — but when Steam IS logged in,
+   * the account links automatically and the live feed starts: full sync.
+   */
+  const loginViaClient = async (silent = false) => {
+    if (!silent) setClientState("loading");
+    if (!silent) setClientMsg("");
     try {
-      const res = await fetch("/api/overlay/login-client", { method: "POST" });
-      const data = await res.json();
+      const data = await apiFetch("/api/overlay/login-client", { method: "POST" });
       if (data.ok) {
         if (data.accountName) setGcAccount(data.accountName);
-        if (data.steamId) setTracked(data.steamId);
+        if (data.steamId) {
+          setTracked(data.steamId);
+          // Mirror into localStorage so the website header shows the same
+          // signed-in profile instantly (same origin, shared storage).
+          try {
+            localStorage.setItem("clutchly.me.steam64", data.steamId);
+          } catch {
+            /* ignore */
+          }
+          if (api) api.saveSettings({ steam: { trackedSteam64: data.steamId } }).catch(() => {});
+        }
         setClientState("ok");
-        setClientMsg(data.message || "Connected via Steam client ✓ — live feed started.");
+        if (!silent) setClientMsg(data.message || "Connected via Steam client ✓ — live feed started.");
       } else if (data.needsPassword && data.accountName) {
-        // Detected the logged-in Steam account — prefill so only the password is needed.
+        // Steam is logged in but won't hand out a session token unless
+        // "Remember my password" is on — tell the user exactly how to fix it.
         setGcAccount(data.accountName);
-        if (data.steamId) setTracked(data.steamId);
         setClientState("empty");
-        setClientMsg(data.message || `Steam is logged in as ${data.accountName} — enter your password below to finish.`);
-      } else {
+        setClientMsg(
+          `Steam is logged in as ${data.accountName}. Tick “Remember my password” in Steam (Account → Security), restart Steam, then reopen this window and it syncs automatically — or scan the QR to link right now.`,
+        );
+      } else if (!silent) {
         setClientState("error");
         setClientMsg(data.message || "Could not auto-login via the Steam client.");
       }
-    } catch {
-      setClientState("error");
-      setClientMsg("Could not reach the app server (is it running?).");
+    } catch (e) {
+      if (!silent) {
+        setClientState("error");
+        setClientMsg((e as Error)?.message || "Could not reach the app server (is it running?).");
+      }
     }
   };
 
@@ -1326,7 +1370,7 @@ function SettingsModal({
                   </button>
                 </div>
               ) : (
-                /* Not linked — QR is the only option. */
+                /* Not linked — QR login, plus one-click Steam-client auto-login. */
                 <div className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] p-3">
                   {qrDataUrl ? (
                     <div className="flex flex-col items-center gap-2.5">
@@ -1368,6 +1412,26 @@ function SettingsModal({
                     </div>
                   )}
                   {qrMsg && <p className="mt-2 rounded-lg bg-red-400/10 px-3 py-1.5 text-[11px] text-red-300">{qrMsg}</p>}
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="h-px flex-1 bg-white/10" />
+                    <span className="text-[10px] uppercase tracking-widest text-zinc-600">or</span>
+                    <span className="h-px flex-1 bg-white/10" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => loginViaClient(false)}
+                    disabled={clientState === "loading"}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-medium text-zinc-200 transition hover:border-electric-400/40 hover:text-white disabled:opacity-50"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="https://cdn.reicon.dev/logos/steam/original.svg" alt="Steam" width={14} height={14} />
+                    {clientState === "loading" ? "Connecting…" : "Use my Steam client login"}
+                  </button>
+                  {clientMsg && (
+                    <p className="mt-2 rounded-lg bg-white/[0.04] px-3 py-1.5 text-[11px] text-zinc-300">{clientMsg}</p>
+                  )}
                 </div>
               )}
             </section>

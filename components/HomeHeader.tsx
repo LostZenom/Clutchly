@@ -66,6 +66,9 @@ export default function HomeHeader() {
   const [me, setMe] = useState<MeData | null>(null);
   const [meLoading, setMeLoading] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  // One silent Steam-client auto-login attempt per page load, so a logged-in
+  // Steam session syncs to the website instantly — no QR scan required.
+  const autoSyncRef = useRef(false);
 
   const loadMe = useCallback((steam64: string) => {
     setMeLoading(true);
@@ -100,10 +103,25 @@ export default function HomeHeader() {
       setSignedIn(saved);
       loadMe(saved);
     } else {
-      // No local sign-in, but the overlay app may have linked a Steam account
-      // (its QR login writes OVERLAY_TRACK_STEAM64 server-side) — mirror it here
-      // so the website shows the same signed-in profile as the overlay.
-      refreshFromEnv();
+      // No local sign-in. Mirror the overlay app's linked account, and if Steam
+      // is logged in on this PC, link it right here so the website shows the
+      // same signed-in session instantly — no QR scan needed.
+      refreshFromEnv().finally(() => {
+        if (autoSyncRef.current) return;
+        autoSyncRef.current = true;
+        fetch("/api/overlay/login-client", { method: "POST" })
+          .then((r) => r.json())
+          .then((d: { ok?: boolean; steam64?: string }) => {
+            if (d && d.ok && d.steam64) {
+              setSignedIn(d.steam64);
+              localStorage.setItem(STEAM64_KEY, d.steam64);
+              loadMe(d.steam64);
+            }
+          })
+          .catch(() => {
+            /* Steam not running or no session — stay on the sign-in button */
+          });
+      });
     }
   }, [loadMe, refreshFromEnv]);
 

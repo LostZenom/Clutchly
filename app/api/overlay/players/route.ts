@@ -1,11 +1,37 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { type OverlayPlayer, type OverlayPayload, enrichOverlayPlayers } from "@/lib/overlay";
+import { ensureLiveFeed } from "@/src/worker/liveFeed";
+
+// MUST run at request time: Next 14 otherwise statically optimizes this route
+// at build time (bakes a .body file) and the handler — including the live-feed
+// start — never executes when the overlay polls it.
+export const dynamic = "force-dynamic";
+
+export const revalidate = 0;
 
 const CAREER_PREFIX = "CST-CAREER-";
 const LIVE_KEY = "overlay:live";
 
 type FeedStatus = "live" | "waiting" | "last-match";
+
+// The live GC feed must be running for the overlay to show the CURRENT game.
+// It used to require a manual login to start — this starts it the first time
+// anyone polls for players (the overlay polls every few seconds), so it comes
+// up on its own at app launch. ensureLiveFeed is lock-guarded, so repeated
+// triggers are no-ops. (Static import: the same as the login routes — dynamic
+// imports of this module don't load in the standalone server.)
+let feedStarted = false;
+function maybeStartFeed(): void {
+  if (feedStarted) return;
+  feedStarted = true;
+  console.log("[players] starting live feed…");
+  ensureLiveFeed()
+    .then((f) => console.log("[players] live feed resolved:", f.name))
+    .catch((e: unknown) => {
+      console.error("[players] live feed start failed:", e instanceof Error ? e.message : e);
+    });
+}
 
 /**
  * GET /api/overlay/players
@@ -21,6 +47,8 @@ type FeedStatus = "live" | "waiting" | "last-match";
  * it's showing the last parsed match (last-match).
  */
 export async function GET(): Promise<NextResponse<OverlayPayload & { status: FeedStatus }>> {
+  maybeStartFeed();
+
   // 1) Live GC snapshot first.
   const live = await prisma.statCache.findUnique({ where: { key: LIVE_KEY } }).catch(() => null);
   const fresh = !!live && live.expiresAt.getTime() > Date.now();

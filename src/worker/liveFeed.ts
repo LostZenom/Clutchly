@@ -28,6 +28,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { rosterFromGc, type OverlayPayload } from "@/lib/overlay";
 import { persistEnvKeys } from "@/lib/envWrite";
+import { findSteamClientUser } from "@/src/worker/steamClient";
 
 const asJson = (v: object) => v as unknown as Prisma.InputJsonValue;
 
@@ -67,10 +68,28 @@ function creds(): { accountName: string; password: string; refreshToken: string 
   return { accountName, password, refreshToken };
 }
 
-/** Which Steam64 to watch — optional override, otherwise the connecting account. */
+/**
+ * Which Steam64 to watch for a live game:
+ *   1. OVERLAY_TRACK_STEAM64 when set (explicitly linked account),
+ *   2. the Steam desktop client account actually logged in on this PC (the one
+ *      the user is playing on) — the GC session can query any account's live
+ *      game, so this makes the overlay grab the right lobby even when the GC
+ *      session belongs to an alt/service account,
+ *   3. the connecting account itself as a last resort.
+ */
 function targetSteamId(self: string): string {
   const t = process.env.OVERLAY_TRACK_STEAM64;
-  return t && /^7\d{16}$/.test(t) ? t : self;
+  if (t && /^7\d{16}$/.test(t)) return t;
+  try {
+    const client = findSteamClientUser();
+    if (client && /^7\d{16}$/.test(client.steamId)) {
+      console.log(`[live-overlay-feed] tracking the Steam client account ${client.steamId} (${client.accountName})`);
+      return client.steamId;
+    }
+  } catch {
+    /* ignore — fall through to the connecting account */
+  }
+  return self;
 }
 
 // --- simple cross-process lock so the feed runs once even when the app server,
@@ -219,7 +238,15 @@ async function connectGc(): Promise<{ steam: any; cs2: GcClient }> {
     cs2.once("connectedToGC", () => done(undefined, steam?.accountInfo?.name));
     cs2.on("error", (e: Error) => done(e));
 
-    steam.logOn(cred.accountName ? { accountName: cred.accountName, refreshToken } : { refreshToken });
+    // steam-user refuses account_name together with a refresh token
+    // ("Cannot specify account_name when logging in with a refresh token") —
+    // the token alone identifies the account, so pass ONLY the token when we
+    // have one, otherwise fall back to account + password.
+    if (refreshToken) {
+      steam.logOn({ refreshToken });
+    } else {
+      steam.logOn({ accountName: cred.accountName, password: cred.password });
+    }
     steam.once("loggedOn", () => steam.gamesPlayed([APP_ID]));
   });
 }
@@ -313,13 +340,14 @@ export function startLiveFeed(): LiveFeed {
   let cs2: GcClient | null = null;
   let timer: NodeJS.Timeout | null = null;
   let polling = false;
+  // Resolved once per connection: which account's live game we're watching.
+  let watchSteamId: string | null = null;
 
   async function pollOnce(): Promise<void> {
-    if (!cs2 || !steam?.steamID || polling) return;
+    if (!cs2 || !steam?.steamID || polling || !watchSteamId) return;
     polling = true;
     try {
-      const who = targetSteamId(steam.steamID.getSteamID64());
-      requestLiveGame(cs2, who);
+      requestLiveGame(cs2, watchSteamId);
     } finally {
       polling = false;
     }
@@ -337,6 +365,7 @@ export function startLiveFeed(): LiveFeed {
       const conn = await connectGc();
       steam = conn.steam;
       cs2 = conn.cs2;
+      watchSteamId = targetSteamId(steam?.steamID?.getSteamID64?.() ?? "");
 
       cs2.on("matchList", (matches: unknown[]) => {
         void handleMatchList(matches);
@@ -344,6 +373,7 @@ export function startLiveFeed(): LiveFeed {
       cs2.on("disconnectedFromGC", () => {
         console.log(`[${name}] disconnected — reconnecting`);
         cs2 = null;
+        watchSteamId = null;
         stopTimer();
         scheduleReconnect();
       });

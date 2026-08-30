@@ -40,11 +40,13 @@ const nextConfig = {
         "@laihoe/demoparser2": "commonjs @laihoe/demoparser2",
         "@laihoe/demoparser2-win32-x64-msvc": "commonjs @laihoe/demoparser2-win32-x64-msvc",
         "steam-user": "commonjs steam-user",
+        "steam-session": "commonjs steam-session",
         "node-cs2": "commonjs node-cs2",
         "node-cs2/language.js": "commonjs node-cs2/language.js",
         "node-cs2/protobufs/generated/_load.js": "commonjs node-cs2/protobufs/generated/_load.js",
         "bytebuffer": "commonjs bytebuffer",
         "steamid": "commonjs steamid",
+        "@doctormckay/stdlib": "commonjs @doctormckay/stdlib",
       });
     }
     return config;
